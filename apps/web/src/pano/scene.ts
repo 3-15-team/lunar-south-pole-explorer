@@ -8,6 +8,7 @@ import { EARTH_RADIUS_KM, R_MOON_KM, R_MOON_M, SUN_RADIUS_KM, AU_KM, enuAt, latL
 import type { HorizonProfile } from '../core/horizon';
 import type { DemClient } from '../data/dem';
 import { mulberry32 } from '../core/suitability';
+import { config, INTERP_BC, mnKernel } from '../config';
 
 export interface PanoSite {
   x: number;
@@ -37,6 +38,9 @@ uniform sampler2D uFarH;
 uniform vec3 uSun; uniform float uSunR; uniform float uFlux;
 uniform vec3 uEarth; uniform float uEarthPhase;
 uniform float uAmbient; uniform float uExposure; uniform vec3 uCam;
+uniform int uInterp;   // 0 bilinear (hardware), 1 cubic Mitchell-Netravali with uBC = (B, C)
+uniform vec2 uBC;
+uniform float uReliefAA; // relief prefilter: scale of the true (anisotropic) pixel footprint on the ground; <= 0 = legacy isotropic estimate
 const float TAU = 6.28318530718;
 const float PI = 3.14159265359;
 float hf(vec2 en) {
@@ -44,6 +48,40 @@ float hf(vec2 en) {
   if (max(a.x, a.y) < uFineHalf * 0.995) { vec2 uv = en / uFineHalf * 0.5 + 0.5; return texture2D(uFine, vec2(uv.x, 1.0 - uv.y)).r; }
   vec2 uv = clamp(en / uCoarseHalf * 0.5 + 0.5, 0.0, 1.0);
   return texture2D(uCoarse, vec2(uv.x, 1.0 - uv.y)).r;
+}
+// Mitchell-Netravali cubic kernel (B, C): Catmull-Rom (0, 1/2), Mitchell (1/3, 1/3), B-spline (1, 0)
+float mnK(float x) {
+  x = abs(x);
+  float B = uBC.x, C = uBC.y;
+  if (x < 1.0) return ((12.0 - 9.0 * B - 6.0 * C) * x * x * x + (-18.0 + 12.0 * B + 6.0 * C) * x * x + (6.0 - 2.0 * B)) / 6.0;
+  if (x < 2.0) return ((-B - 6.0 * C) * x * x * x + (6.0 * B + 30.0 * C) * x * x + (-12.0 * B - 48.0 * C) * x + (8.0 * B + 24.0 * C)) / 6.0;
+  return 0.0;
+}
+// 4x4-tap cubic height; texel centres at (i + 0.5) * sp, row 0 = north edge (same layout as heightAt())
+float cubicTex(sampler2D t, float halfW, vec2 en) {
+  ivec2 sz = textureSize(t, 0);
+  float sp = 2.0 * halfW / float(sz.x);
+  vec2 f = vec2((en.x + halfW) / sp - 0.5, (halfW - en.y) / sp - 0.5);
+  vec2 i = floor(f);
+  vec2 w = f - i;
+  ivec2 i0 = ivec2(i);
+  ivec2 mx = sz - 1;
+  vec4 wx = vec4(mnK(1.0 + w.x), mnK(w.x), mnK(1.0 - w.x), mnK(2.0 - w.x));
+  vec4 wy = vec4(mnK(1.0 + w.y), mnK(w.y), mnK(1.0 - w.y), mnK(2.0 - w.y));
+  float acc = 0.0;
+  for (int dy = 0; dy < 4; dy++) {
+    vec4 row;
+    for (int dx = 0; dx < 4; dx++) row[dx] = texelFetch(t, clamp(i0 + ivec2(dx - 1, dy - 1), ivec2(0), mx), 0).r;
+    acc += wy[dy] * dot(wx, row);
+  }
+  return acc;
+}
+// surface height used for shading normals (and matching the mesh vertices): smooth interpolation
+float hs(vec2 en) {
+  if (uInterp == 0) return hf(en);
+  vec2 a = abs(en);
+  if (max(a.x, a.y) < uFineHalf * 0.995) return cubicTex(uFine, uFineHalf, en);
+  return cubicTex(uCoarse, uCoarseHalf, clamp(en, -uCoarseHalf, uCoarseHalf));
 }
 float edgeFrac(float z) { z = clamp(z, -1.0, 1.0); return 1.0 - (acos(z) - z * sqrt(1.0 - z * z)) / PI; }
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -57,9 +95,12 @@ float regolith(vec2 p, float px) {
 void main() {
   vec2 en = vec2(vPos.x, -vPos.z);
   float dist = length(vPos - uCam);
-  float px = max(0.01, dist * 0.0012);
+  // pixel footprint on the ground: the major axis of the screen-space derivative footprint, so
+  // grazing views (footprint stretched along the view ray) prefilter relief detail enough
+  float fp = max(length(dFdx(vPos.xz)), length(dFdy(vPos.xz)));
+  float px = uReliefAA > 0.0 ? max(0.01, uReliefAA * fp) : max(0.01, dist * 0.0012);
   float d = max(0.5, px);
-  vec2 g = vec2(hf(en + vec2(d, 0.0)) - hf(en - vec2(d, 0.0)), hf(en + vec2(0.0, d)) - hf(en - vec2(0.0, d))) / (2.0 * d);
+  vec2 g = vec2(hs(en + vec2(d, 0.0)) - hs(en - vec2(d, 0.0)), hs(en + vec2(0.0, d)) - hs(en - vec2(0.0, d))) / (2.0 * d);
   float e = max(px, 0.02);
   float n0 = regolith(en, px);
   vec2 bump = vec2(regolith(en + vec2(e, 0.0), px) - n0, regolith(en + vec2(0.0, e), px) - n0) / e * 0.35;
@@ -164,6 +205,8 @@ export class PanoScene {
   pitch = 0.02;
   pos = new THREE.Vector2(0, 0); // (e, n) metres from the site
   ambient = 0.03;
+  /** Height-field interpolation (runtime config, see config.ts). */
+  readonly interp = config.panoTerrainInterp;
   state: PanoState = { sunAz: 0, sunEl: 0, earthAz: 0, earthEl: 0, earthPhase: 0, heading: 0 };
 
   constructor(
@@ -199,6 +242,9 @@ export class PanoScene {
         uAmbient: { value: 0.03 },
         uExposure: { value: 11 },
         uCam: { value: new THREE.Vector3() },
+        uInterp: { value: this.interp === 'bilinear' ? 0 : 1 },
+        uReliefAA: { value: config.panoReliefAA },
+        uBC: { value: new THREE.Vector2(...(this.interp === 'bilinear' ? [0, 0.5] : INTERP_BC[this.interp])) },
       },
     });
     this.sun = new THREE.Mesh(
@@ -275,6 +321,22 @@ export class PanoScene {
     const sp = (2 * half) / N;
     const fc = (e + half) / sp - 0.5;
     const fr = (half - n) / sp - 0.5;
+    if (this.interp !== 'bilinear') {
+      const [B, C] = INTERP_BC[this.interp];
+      const ic = Math.floor(fc);
+      const ir = Math.floor(fr);
+      const tx = fc - ic;
+      const ty = fr - ir;
+      let acc = 0;
+      for (let dy = -1; dy <= 2; dy++) {
+        const wy = mnKernel(dy - ty, B, C);
+        const r = Math.max(0, Math.min(N - 1, ir + dy)) * N;
+        let row = 0;
+        for (let dx = -1; dx <= 2; dx++) row += mnKernel(dx - tx, B, C) * data[r + Math.max(0, Math.min(N - 1, ic + dx))];
+        acc += wy * row;
+      }
+      return acc;
+    }
     const c0 = Math.max(0, Math.min(N - 2, Math.floor(fc)));
     const r0 = Math.max(0, Math.min(N - 2, Math.floor(fr)));
     const wx = Math.min(1, Math.max(0, fc - c0));

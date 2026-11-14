@@ -18,3 +18,4 @@
 - 2026-11-14 13:22 `make verify` green (first run: pytest `Abort trap: 6` once, cold numba cache; reruns pass).
 - 2026-11-14 13:58 T-043 panorama AA: prefilter-only multiplier measured ineffective (≤ 3 % px changed at 8×) → supersampling + Gaussian resolve, σ configurable (env/`/config.json`/`?aa=`), default 1.0 px; σ = 0.5 reproduces the old frame (0.04 % px differ). verify green.
 - 2026-11-14 revert of PR #3 (panorama AA, ADR-114): user did not like the result; code back to the pre-merge state (direct render, MSAA only).
+- 2026-11-14 T-044 panorama relief AA (ADR-115): the low-Sun sparkle was the procedural micro-relief/DEM normals under-filtered at grazing view angles (isotropic px estimate); fixed with the derivative footprint + configurable cubic height interpolation. Sparkle RMS 1.76 → 0.73.

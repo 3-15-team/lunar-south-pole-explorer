@@ -16,4 +16,3 @@
 - 2026-11-14 12:40 repo split: `git subtree split --prefix=sandbox/dima` → new repo `lunar-south-pole-explorer` (main, no remote); session #1 ends here, resume via `prompts/03_NEW_REPO_PROMPT.md`.
 - 2026-11-14 13:17 session #2, started; first session in the split repo, resumed from 4f7850d. Data/.venv/node_modules already in place; compose (:8642) already running from this path. Remote `origin` now set (3-15-team/lunar-south-pole-explorer).
 - 2026-11-14 13:22 `make verify` green (first run: pytest `Abort trap: 6` once, cold numba cache; reruns pass).
-- 2026-11-14 13:58 T-043 panorama AA: prefilter-only multiplier measured ineffective (≤ 3 % px changed at 8×) → supersampling + Gaussian resolve, σ configurable (env/`/config.json`/`?aa=`), default 1.0 px; σ = 0.5 reproduces the old frame (0.04 % px differ). verify green.

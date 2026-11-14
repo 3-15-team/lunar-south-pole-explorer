@@ -37,7 +37,6 @@ P3 — wow layer
 P4 — finish
 - [x] T-040 docs: README, DEMO (real numbers), REFERENCES, SUBMISSION, VALIDATION, API
 - [x] T-041 `make verify` green; `make up` → http://localhost:8642 all smoke checks green
-- [x] T-043 configurable panorama anti-aliasing (ADR-114): `PANO_AA_SIGMA` (default 1.0 px = 2× original) / `?aa=`
 - [ ] T-042 demo video + English subtitles (team; script in `docs/DEMO.md`)
 
 ## NEXT ACTION
@@ -55,7 +54,6 @@ P4 — finish
 - Data: `data/raw` (downloads, manifest-tracked), `data/work` (server-only), `data/web` (served at `/data`).
 - Disk free ≈ 13 GB after downloads/tiles (watch it: 40 m DEM + z6 tiles ≈ +1 GB).
 - Headless visual check: `node <scratchpad>/pw/shot.mjs` (playwright-core driving installed Chrome; real GPU via ANGLE Metal).
-- Panorama AA: `make up PANO_AA_SIGMA=…` (served as `/config.json`), browser override `?aa=…`; 0.5 = original look. Supersampling costs up to 4× fragment work in the panorama.
 - Demo scenario scan: `cd apps/web && npx vite-node scripts/demo-scan.ts`.
 
 ## Performance (measured, M1 Max, Chrome)
@@ -78,4 +76,4 @@ P4 — finish
 
 ## Last `make verify`
 
-- 2026-11-14 13:58 UTC (session #2): **green** — ruff ✓, pytest 61 ✓, tsc ✓, vitest 26 ✓, vite build ✓, smoke :8642 9/9 ✓.
+- 2026-11-14 13:22 UTC (session #2, split repo): **green** — ruff ✓, pytest 61 passed, tsc ✓, vitest 22 passed, vite build ✓, smoke http://localhost:8642 ✓ (9/9). (First attempt: pytest aborted once, see Known issues.)

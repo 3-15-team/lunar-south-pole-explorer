@@ -289,8 +289,10 @@ export class PanoScene {
   pitch = 0.02;
   pos = new THREE.Vector2(0, 0); // (e, n) metres from the site
   ambient = 0.03;
-  /** True when the statistical micro-relief tiles are in use (else the procedural bump fallback). */
-  microLoaded = false;
+  /** True when the statistical micro-relief is currently shown (else the procedural bump fallback). */
+  microActive = false;
+  private microWanted = false;
+  private microLoad: Promise<boolean> | null = null;
   /** Height-field interpolation (runtime config, see config.ts). */
   readonly interp = config.panoTerrainInterp;
   state: PanoState = { sunAz: 0, sunEl: 0, earthAz: 0, earthEl: 0, earthPhase: 0, heading: 0 };
@@ -347,6 +349,30 @@ export class PanoScene {
     );
     this.stars = this.makeStars();
     this.scene.add(this.stars, this.sun, this.earth);
+  }
+
+  /**
+   * Switch the statistical micro-relief on/off at runtime. Tiles are fetched on first use; resolves to
+   * whether it is active now (false if off, disabled by config, or the tiles are not built).
+   */
+  async setMicro(on: boolean): Promise<boolean> {
+    this.microWanted = on && config.panoMicro > 0;
+    const u = this.terrainMat.uniforms;
+    if (this.microWanted && !this.microLoad) {
+      this.microLoad = loadMicroRelief(this.dem.baseUrl + 'micro/')
+        .then((m) => {
+          u.uMicroC.value = m.coarse.tex;
+          u.uMicroF.value = m.fine.tex;
+          u.uMicroDim.value.set(m.coarse.meters, m.coarse.size, m.fine.meters, m.fine.size);
+          return true;
+        })
+        .catch(() => false);
+    }
+    const ok = this.microWanted && (await this.microLoad!);
+    // a later call may have flipped the wish while we were loading: apply the latest one
+    this.microActive = this.microWanted && ok;
+    u.uMicro.value = this.microActive ? config.panoMicro : 0;
+    return this.microActive;
   }
 
   /** SPS grid coordinates of local (e, n). */
@@ -451,17 +477,6 @@ export class PanoScene {
     ft.wrapS = THREE.RepeatWrapping;
     ft.needsUpdate = true;
     u.uFarH.value = ft;
-    if (config.panoMicro > 0) {
-      onProgress?.('Loading micro-relief…');
-      const m = await loadMicroRelief(this.dem.baseUrl + 'micro/').catch(() => null);
-      if (m) {
-        u.uMicroC.value = m.coarse.tex;
-        u.uMicroF.value = m.fine.tex;
-        u.uMicroDim.value.set(m.coarse.meters, m.coarse.size, m.fine.meters, m.fine.size);
-        u.uMicro.value = config.panoMicro;
-        this.microLoaded = true;
-      }
-    }
     onProgress?.('Building mesh…');
     this.scene.add(this.makeTerrainMesh());
     this.skirt = this.makeSkirt(far);

@@ -80,7 +80,7 @@ button, input, select { font: inherit; color: inherit; }
 .tagline { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .modes { display: flex; gap: 4px; margin-left: auto; }
 .modes button, .seg button { background: transparent; border: 1px solid var(--line); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
-.modes button.on, .seg button.on { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+.modes button.on, .seg button.on, .btn.on { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
 .right-tools { display: flex; gap: 8px; align-items: center; }
 .seg { display: flex; gap: 2px; }
 

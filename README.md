@@ -49,6 +49,9 @@ overrides it for one tab):
 - `PANO_MICRO` = amplitude of the statistical sub-DEM micro-relief (default `1`; `0.6` = calmer; `0` = off →
   the old procedural texture). Built by `make data-micro` (seconds; part of `make data` / `data-min`)
   into `data/web/micro/`; without it the panorama silently uses the procedural texture.
+- Micro-relief can be switched on/off in the panorama ("Micro-relief" button). Its initial state defaults
+  to **on**; the single place to change that default is `DEFAULT_CONFIG.panoMicroDefault` in
+  `apps/web/src/config.ts`; per deployment `make up PANO_MICRO_DEFAULT=off`, per link `?micro=off`.
 
 Example: `make up PANO_TERRAIN_INTERP=bspline PANO_RELIEF_AA=1.5`, or
 `http://localhost:8642/?interp=bilinear&raa=0#m=pano` for the original look.

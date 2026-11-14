@@ -16,5 +16,13 @@ micro="${PANO_MICRO:-1}"
 case "$micro" in
   ''|*[!0-9.]*) echo "web-config: PANO_MICRO='$micro' is not a number, using 1" >&2; micro=1 ;;
 esac
-printf '{"panoTerrainInterp": "%s", "panoReliefAA": %s, "panoMicro": %s}\n' "$interp" "$raa" "$micro" > /usr/share/nginx/html/config.json
-echo "web-config: panoTerrainInterp=$interp panoReliefAA=$raa panoMicro=$micro"
+# initial state of the panorama micro-relief toggle: only written when set explicitly, so the single
+# default lives in apps/web/src/config.ts (DEFAULT_CONFIG.panoMicroDefault)
+mdef=""
+case "${PANO_MICRO_DEFAULT:-}" in
+  '') ;;
+  on|off) mdef=", \"panoMicroDefault\": \"${PANO_MICRO_DEFAULT}\"" ;;
+  *) echo "web-config: PANO_MICRO_DEFAULT='${PANO_MICRO_DEFAULT}' must be on|off, ignored" >&2 ;;
+esac
+printf '{"panoTerrainInterp": "%s", "panoReliefAA": %s, "panoMicro": %s%s}\n' "$interp" "$raa" "$micro" "$mdef" > /usr/share/nginx/html/config.json
+echo "web-config: $(cat /usr/share/nginx/html/config.json)"

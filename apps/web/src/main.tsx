@@ -9,6 +9,7 @@ import {
   computeOnline,
   ephRange,
   interval,
+  microRelief,
   services,
   siteRef,
   status,
@@ -26,7 +27,8 @@ const COMPUTE_BASE = (import.meta.env.VITE_COMPUTE_BASE as string | undefined) ?
 async function boot(): Promise<void> {
   services.dataBase = DATA_BASE;
   services.computeBase = COMPUTE_BASE;
-  await loadConfig(new URL('config.json', document.baseURI).pathname);
+  const cfg = await loadConfig(new URL('config.json', document.baseURI).pathname);
+  microRelief.value = cfg.panoMicroDefault && cfg.panoMicro > 0;
   initUrlSync();
   render(<App />, document.getElementById('app')!);
 

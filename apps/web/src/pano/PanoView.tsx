@@ -1,7 +1,8 @@
 // Panorama mode (lazy). Uses the shared store: site, time, observer height, lighting.
 import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { dte, hObs, instant, lighting, metricsState, mode, services, siteResult, time } from '../state/store';
+import { dte, hObs, instant, lighting, metricsState, microRelief, mode, services, siteResult, time } from '../state/store';
+import { config } from '../config';
 import { fmtDate, fmtDeg, fmtDuration, fmtPct } from '../ui/format';
 import { PanoScene } from './scene';
 
@@ -13,6 +14,7 @@ export default function PanoView() {
   const [msg, setMsg] = useState('Preparing panorama…');
   const [heading, setHeading] = useState(0);
   const [micro, setMicro] = useState(false);
+  const [microMissing, setMicroMissing] = useState(false);
   const sr = siteResult.value;
 
   useEffect(() => {
@@ -73,6 +75,15 @@ export default function PanoView() {
         scene.eyeHeight = hObs.value;
         dirty = true;
       }),
+      effect(() => {
+        const want = microRelief.value;
+        scene.setMicro(want).then((active) => {
+          if (disposed) return;
+          setMicro(active);
+          setMicroMissing(want && !active && config.panoMicro > 0);
+          dirty = true;
+        });
+      }),
     ];
 
     let last = performance.now();
@@ -102,7 +113,6 @@ export default function PanoView() {
         scene.update(time.peek(), 0.035);
         scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
         setMsg('');
-        setMicro(scene.microLoaded);
         raf = requestAnimationFrame(loop);
       })
       .catch((e: Error) => setMsg('Panorama failed: ' + e.message));
@@ -154,6 +164,21 @@ export default function PanoView() {
             Realistic
           </button>
         </div>
+        {config.panoMicro > 0 && (
+          <button
+            class={'btn small' + (microRelief.value && !microMissing ? ' on' : '')}
+            aria-pressed={microRelief.value && !microMissing}
+            disabled={microMissing}
+            title={
+              microMissing
+                ? 'Micro-relief tiles are not built (make data-micro)'
+                : 'Synthetic sub-DEM relief: craters and rocks drawn from published size distributions, lit by the real Sun (not imagery)'
+            }
+            onClick={() => (microRelief.value = !microRelief.value)}
+          >
+            Micro-relief {microRelief.value && !microMissing ? 'on' : 'off'}
+          </button>
+        )}
         <button class="btn small" onClick={() => (mode.value = 'map')}>
           ← Map
         </button>

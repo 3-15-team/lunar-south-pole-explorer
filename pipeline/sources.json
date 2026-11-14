@@ -1,0 +1,145 @@
+{
+ "_comment": "Source datasets. `make data-fetch` downloads every entry whose tier is <= DATA_TIER (default 1), resumably, verifies size/sha256 and records them in data/manifest.json. Fill sha256 after the first verified download (the job prints it).",
+ "sources": [
+  {
+   "id": "naif-lsk",
+   "tier": 0,
+   "dest": "naif/naif0012.tls",
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
+   "size": 5257,
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "description": "Leap seconds kernel"
+  },
+  {
+   "id": "naif-pck-text",
+   "tier": 0,
+   "dest": "naif/pck00011.tpc",
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc",
+   "size": 131226,
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "description": "Body radii/orientation constants (Sun, Earth radii)"
+  },
+  {
+   "id": "naif-moon-fk",
+   "tier": 0,
+   "dest": "naif/moon_de440_250416.tf",
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/satellites/moon_de440_250416.tf",
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "description": "Lunar frames kernel; MOON_ME := MOON_ME_DE440_ME421 (aligned with DE421 ME used by LOLA products)"
+  },
+  {
+   "id": "naif-moon-bpc",
+   "tier": 0,
+   "dest": "naif/moon_pa_de440_200625.bpc",
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/moon_pa_de440_200625.bpc",
+   "size": 12863488,
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "description": "Lunar PA orientation (DE440 libration)"
+  },
+  {
+   "id": "naif-de440s",
+   "tier": 0,
+   "dest": "naif/de440s.bsp",
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp",
+   "size": 32726016,
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "description": "Planetary ephemeris DE440 short (1849-2150)"
+  },
+  {
+   "id": "psr-1km2-shp",
+   "tier": 0,
+   "dest": "psr/LPSR_80S_20MPP_ADJ_1km2.SHP",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.SHP",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "Permanently shadowed regions > 1 km2 (Barker et al. 2023), polygons"
+  },
+  {
+   "id": "psr-1km2-shx",
+   "tier": 0,
+   "dest": "psr/LPSR_80S_20MPP_ADJ_1km2.SHX",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.SHX",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "PSR shapefile index"
+  },
+  {
+   "id": "psr-1km2-dbf",
+   "tier": 0,
+   "dest": "psr/LPSR_80S_20MPP_ADJ_1km2.DBF",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.DBF",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "PSR shapefile attributes"
+  },
+  {
+   "id": "psr-1km2-prj",
+   "tier": 0,
+   "dest": "psr/LPSR_80S_20MPP_ADJ_1km2.PRJ",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.PRJ",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "PSR shapefile projection"
+  },
+  {
+   "id": "mazarico-sun-85s",
+   "tier": 0,
+   "dest": "illum/AVGVISIB_85S_060M_201608.TIF",
+   "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "Mazarico et al. average Sun visibility 85S-90S, 60 m (REFERENCE ONLY, validation)"
+  },
+  {
+   "id": "mazarico-earth-85s",
+   "tier": 0,
+   "dest": "illum/AVGVISIB_85S_060M_201608_EARTH.TIF",
+   "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "Mazarico et al. average Earth visibility 85S-90S, 60 m (REFERENCE ONLY, validation)"
+  },
+  {
+   "id": "ldem-80s-80m",
+   "tier": 0,
+   "dest": "lola/LDEM_80S_80MPP_ADJ.TIF",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ.TIF",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "LOLA DEM 80S-90S, 80 m/px, MOON_ME DE421 (Barker et al. 2023)"
+  },
+  {
+   "id": "ldem-80s-80m-err",
+   "tier": 1,
+   "dest": "lola/LDEM_80S_80MPP_ADJ_ERR.TIF",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ_ERR.TIF",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "LOLA DEM height error (1-sigma), 80 m/px"
+  },
+  {
+   "id": "ldem-80s-40m",
+   "tier": 1,
+   "dest": "lola/LDEM_80S_40MPP_ADJ.TIF",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_40MPP_ADJ.TIF",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "LOLA DEM 80S-90S, 40 m/px (finest global level used; 20 m skipped for disk budget)"
+  },
+  {
+   "id": "site-dems",
+   "tier": 1,
+   "kind": "pgda-5m-sites",
+   "dest": "lola5/",
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/",
+   "sites": [
+    "Site01",
+    "Site04",
+    "Site06",
+    "Site07",
+    "Site11",
+    "Site20v2",
+    "Site23",
+    "DM2",
+    "Haworth"
+   ],
+   "files": [
+    "{site}_final_adj_5mpp_surf.tif",
+    "{site}_final_adj_5mpp_toterr.tif"
+   ],
+   "license": "Public domain (NASA GSFC PGDA)",
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory"
+  }
+ ]
+}

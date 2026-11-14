@@ -1,0 +1,115 @@
+{
+ "files": {
+  "mazarico-earth-85s": {
+   "description": "Mazarico et al. average Earth visibility 85S-90S, 60 m (REFERENCE ONLY, validation)",
+   "fetched_utc": "2026-11-14T10:06:09Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/illum/AVGVISIB_85S_060M_201608_EARTH.TIF",
+   "sha256": "d71dc5adfff653e0e924e0a4cbf03795b996caa30b4ace3d5843a70a5ab2f3d2",
+   "size": 24862958,
+   "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF"
+  },
+  "mazarico-sun-85s": {
+   "description": "Mazarico et al. average Sun visibility 85S-90S, 60 m (REFERENCE ONLY, validation)",
+   "fetched_utc": "2026-11-14T10:03:42Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/illum/AVGVISIB_85S_060M_201608.TIF",
+   "sha256": "ccf67d4f39e0a970c111196da7d6551ffcf50d075470b93067fb3904c0b05806",
+   "size": 33994464,
+   "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF"
+  },
+  "naif-de440s": {
+   "description": "Planetary ephemeris DE440 short (1849-2150)",
+   "fetched_utc": "2026-11-14T09:59:30Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "path": "raw/naif/de440s.bsp",
+   "sha256": "c1c7feeab882263fc493a9d5a5b2ddd71b54826cdf65d8d17a76126b260a49f2",
+   "size": 32726016,
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp"
+  },
+  "naif-lsk": {
+   "description": "Leap seconds kernel",
+   "fetched_utc": "2026-11-14T09:59:29Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "path": "raw/naif/naif0012.tls",
+   "sha256": "678e32bdb5a744117a467cd9601cd6b373f0e9bc9bbde1371d5eee39600a039b",
+   "size": 5257,
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls"
+  },
+  "naif-moon-bpc": {
+   "description": "Lunar PA orientation (DE440 libration)",
+   "fetched_utc": "2026-11-14T09:59:30Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "path": "raw/naif/moon_pa_de440_200625.bpc",
+   "sha256": "60cd55aa401ea2ea97360636f567554bfe4e37bb829f901b4460a455dfaf783f",
+   "size": 12863488,
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/moon_pa_de440_200625.bpc"
+  },
+  "naif-moon-fk": {
+   "description": "Lunar frames kernel; MOON_ME := MOON_ME_DE440_ME421 (aligned with DE421 ME used by LOLA products)",
+   "fetched_utc": "2026-11-14T09:59:30Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "path": "raw/naif/moon_de440_250416.tf",
+   "sha256": "a47c71e9c9f33796bdafb2c9d69a7ee447b6016ecad80f71cd6f3e479f9cf768",
+   "size": 19478,
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/satellites/moon_de440_250416.tf"
+  },
+  "naif-pck-text": {
+   "description": "Body radii/orientation constants (Sun, Earth radii)",
+   "fetched_utc": "2026-11-14T09:59:29Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA/JPL NAIF generic kernels)",
+   "path": "raw/naif/pck00011.tpc",
+   "sha256": "3dff7b1dbeceaa01f25467767d3fa25816051c85d162d1edf04acb310ee28bb1",
+   "size": 131226,
+   "url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc"
+  },
+  "psr-1km2-dbf": {
+   "description": "PSR shapefile attributes",
+   "fetched_utc": "2026-11-14T10:01:21Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.DBF",
+   "sha256": "23c3e3a01cde8d8c2114196f7430c46c24505c1a6e75fcdb522670d8efcc62da",
+   "size": 369101,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.DBF"
+  },
+  "psr-1km2-prj": {
+   "description": "PSR shapefile projection",
+   "fetched_utc": "2026-11-14T10:01:23Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.PRJ",
+   "sha256": "793b80952f23fbff90f48f9e13868b6b7fc5dc07ba0b1633b124c3db52462854",
+   "size": 368,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.PRJ"
+  },
+  "psr-1km2-shp": {
+   "description": "Permanently shadowed regions > 1 km2 (Barker et al. 2023), polygons",
+   "fetched_utc": "2026-11-14T10:01:13Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.SHP",
+   "sha256": "39a9906545188ea4d9b844d34f946de7a6721993f778076d85778650cbbfb741",
+   "size": 20743300,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.SHP"
+  },
+  "psr-1km2-shx": {
+   "description": "PSR shapefile index",
+   "fetched_utc": "2026-11-14T10:01:15Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.SHX",
+   "sha256": "3bc10378025d62ded5805e2eebe4c016e461a8c6fe661f15367e4019f2b85827",
+   "size": 12348,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.SHX"
+  }
+ },
+ "version": 1
+}

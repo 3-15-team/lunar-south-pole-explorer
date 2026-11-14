@@ -1,0 +1,24 @@
+# data never goes into git (see docs/DATA.md, data/manifest.json is the exception)
+data/*
+!data/manifest.json
+!data/README.md
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+# node
+node_modules/
+apps/web/dist/
+apps/web/public/data
+# build outputs
+dist-static/
+.cache/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example

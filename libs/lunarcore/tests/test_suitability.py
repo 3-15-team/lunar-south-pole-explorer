@@ -7,7 +7,7 @@ from lunarcore import suitability as S
 
 
 def test_presets_and_utilities():
-    for name, p in S.PRESETS.items():
+    for p in S.PRESETS.values():
         assert math.isclose(sum(p["weights"].values()), 1.0)
     u = S.utilities(0.9, 0.0, 0.8, 0.0, 0.0, 50.0, 10.0, 96.0)
     assert all(math.isclose(float(v), 1.0) for v in u.values())

@@ -1,0 +1,12 @@
+# keep the build context small: data is mounted, never copied
+data
+**/node_modules
+.venv
+**/__pycache__
+**/.pytest_cache
+.ruff_cache
+apps/web/dist
+dist-static
+.git
+.idea
+prompts

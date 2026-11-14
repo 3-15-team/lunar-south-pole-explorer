@@ -1,0 +1,39 @@
+# Primary demo stack: `make up` → http://localhost:${COMPOSE_PORT:-8088}
+# Paths are relative to the project root (Makefile passes --project-directory).
+name: lunar-explorer
+services:
+  web:
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    ports:
+      - "${COMPOSE_PORT:-8088}:80"
+    volumes:
+      - ./data/web:/usr/share/nginx/html/data:ro
+    restart: unless-stopped
+
+  compute:
+    build:
+      context: .
+      dockerfile: services/compute/Dockerfile
+    environment:
+      DATA_DIR: /data
+      NUMBA_CACHE_DIR: /data/work/numba-cache
+    volumes:
+      - ./data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  texgen:
+    profiles: ["ai"]
+    build:
+      context: .
+      dockerfile: services/texgen/Dockerfile
+    expose:
+      - "8001"

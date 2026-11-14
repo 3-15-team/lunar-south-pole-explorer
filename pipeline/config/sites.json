@@ -1,5 +1,5 @@
 {
- "_comment": "Curated site catalog -> pipeline/jobs/sites.py -> data/web/sites.json (docs/DATA.md §4). Longitudes east-positive (-180..180). Never invent coordinates: every entry has a source; 'approx' entries explain why in 'note'. PGDA 5 m entries: centre/bbox are recomputed from the DEM GeoTIFF header (coordQuality 'dem-centre'); the lat/lon below is only a fallback taken from the same headers.",
+ "_comment": "Curated site catalog -> pipeline/jobs/sites.py -> data/web/sites.json (docs/DATA.md §4). Longitudes east-positive (-180..180). Never invent coordinates: every entry has a source; 'approx' entries explain why in 'note'. PGDA 5 m entries: the point is recomputed by sites.py as the highest DEM point within the central 60% of the 5 m DEM (coordQuality 'dem-summit'; DEM centre/bbox kept as demCentre/demBbox); the lat/lon below (DEM centres from the GeoTIFF headers) is only a fallback.",
  "version": 1,
  "sites": [
   {"id": "site01", "pgda": "Site01", "name": "Connecting ridge", "lat": -89.463, "lon": -137.490, "kind": "pgda-5m", "coordQuality": "dem-centre",

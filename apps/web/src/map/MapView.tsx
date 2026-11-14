@@ -6,6 +6,8 @@ import OLMap from 'ol/Map';
 import View from 'ol/View';
 import Layer from 'ol/layer/Layer';
 import VectorLayer from 'ol/layer/Vector';
+import ImageLayer from 'ol/layer/Image';
+import ImageStatic from 'ol/source/ImageStatic';
 import VectorSource from 'ol/source/Vector';
 import Feature from 'ol/Feature';
 import { LineString, Point, Polygon } from 'ol/geom';
@@ -76,6 +78,8 @@ export default function MapView() {
   const mapRef = useRef<OLMap | null>(null);
   const candSrc = useRef(new VectorSource());
   const pegRef = useRef(false);
+  const regionLayer = useRef(new ImageLayer({ opacity: 0.8, visible: false }));
+  const [region, setRegion] = useState<{ label: string; busy?: boolean; error?: string } | null>(null);
   pegRef.current = pegArmed;
 
   useEffect(() => {
@@ -150,7 +154,7 @@ export default function MapView() {
     });
     const map = new OLMap({
       target: el.current,
-      layers: [terrain, gratLayer, psrLayer, siteLayer, selLayer, candLayer],
+      layers: [terrain, regionLayer.current, gratLayer, psrLayer, siteLayer, selLayer, candLayer],
       view,
       controls: defaultControls({ rotate: false, attribution: false }).extend([new ScaleLine({ units: 'metric', bar: false })]),
     });
@@ -315,6 +319,43 @@ export default function MapView() {
     }, 10);
   };
 
+  // Region overview: compute service if online, else the pre-baked static heatmaps (DATA.md §6)
+  const loadRegion = async () => {
+    const pr = PRESETS[preset.peek()];
+    const [t0, t1] = interval.peek();
+    setRegion({ label: 'Requesting region heatmap…', busy: true });
+    const show = (png: string, meta: { bbox: number[] }, label: string) => {
+      regionLayer.current.setSource(new ImageStatic({ url: png, imageExtent: meta.bbox, projection: spsProjection() }));
+      regionLayer.current.setVisible(true);
+      setRegion({ label });
+    };
+    try {
+      const r = await fetch(services.computeBase + 'v1/heatmap', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ t0: new Date(t0).toISOString(), t1: new Date(t1).toISOString(), preset: pr.id, footprintM: footprint.peek(), slopeLimitDeg: slopeLimit.peek(), dteThreshold: dte.peek() }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = (await r.json()) as { png: string; meta: { bbox: number[] } };
+      const png = j.png.startsWith('/api/') ? services.computeBase + j.png.slice('/api/'.length) : j.png;
+      show(png, j.meta, `Server region heatmap (${pr.label}, ${new Date(t0).toISOString().slice(0, 10)} → ${new Date(t1).toISOString().slice(0, 10)})`);
+      return;
+    } catch {
+      /* fall back to the static pre-baked set */
+    }
+    try {
+      const idx = (await (await fetch(services.dataBase + 'heatmaps/index.json')).json()) as { items: { id: string; preset: string; t0: string; t1: string; url: string; meta: string }[] };
+      const items = idx.items.filter((i) => i.preset === pr.id);
+      if (!items.length) throw new Error('no pre-baked heatmap for this preset');
+      const best = items.reduce((a, b) => (Math.abs(Date.parse(a.t0) - t0) <= Math.abs(Date.parse(b.t0) - t0) ? a : b));
+      const meta = (await (await fetch(services.dataBase + 'heatmaps/' + best.meta)).json()) as { bbox: number[] };
+      show(services.dataBase + 'heatmaps/' + best.url, meta, `Pre-baked heatmap (compute service offline): ${best.t0.slice(0, 10)} → ${best.t1.slice(0, 10)}`);
+    } catch (e) {
+      regionLayer.current.setVisible(false);
+      setRegion({ label: '', error: `Region heatmap unavailable: ${(e as Error).message}` });
+    }
+  };
+
   const L = layer.value;
   const pr = PRESETS[preset.value];
   return (
@@ -370,6 +411,17 @@ export default function MapView() {
                 ))}
               </ol>
             )}
+            <div class="row-btns">
+              <button class="btn small" onClick={loadRegion} disabled={region?.busy}>
+                Region overview (server)
+              </button>
+              {region && !region.busy && !region.error && (
+                <button class="btn small" onClick={() => { regionLayer.current.setVisible(false); setRegion(null); }}>
+                  Hide
+                </button>
+              )}
+            </div>
+            {region && <div class={`hint ${region.error ? 'warn' : ''}`}>{region.error ?? region.label}</div>}
             <div class="hint">Weights: sun {pr.weights.illum} · night {pr.weights.dark} · Earth {pr.weights.earth} · slope {pr.weights.slope} · relief {pr.weights.relief}. No trained model — every term is in docs/METRICS.md.</div>
           </div>
         )}

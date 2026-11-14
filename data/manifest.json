@@ -160,6 +160,26 @@
    "size": 142123767,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Haworth/Haworth_final_adj_5mpp_surf.tif"
   },
+  "site5m-Haworth-toterr": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:43:23Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Haworth/Haworth_final_adj_5mpp_toterr.tif",
+   "sha256": "f4231e1605d27b90c21fe5183db4e37de7532fed6b8fcfda860ec2eca8c61963",
+   "size": 142123773,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Haworth/Haworth_final_adj_5mpp_toterr.tif"
+  },
+  "site5m-Shoemaker-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:43:35Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Shoemaker/Shoemaker_final_adj_5mpp_surf.tif",
+   "sha256": "75329262a6dbe37e4370adcf23ec3854396c9d3e911a682d76c170178a0b8290",
+   "size": 64025605,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Shoemaker/Shoemaker_final_adj_5mpp_surf.tif"
+  },
   "site5m-Site01-surf": {
    "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
    "fetched_utc": "2026-11-14T10:24:20Z",
@@ -169,6 +189,16 @@
    "sha256": "3ba7b97cb00a2bcf21189c3aeb535f65afc21207154ab9f0d43c5bdc1f7e747e",
    "size": 40980810,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site01-toterr": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:45:43Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site01/Site01_final_adj_5mpp_toterr.tif",
+   "sha256": "cf2cf52f52d2aa51e60d058010d10b0ebfb1d3e920f5a2b9a46eb6c51054ab1c",
+   "size": 40980810,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_toterr.tif"
   },
   "site5m-Site04-surf": {
    "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
@@ -229,18 +259,28 @@
    "sha256": "e51451f3629ba7cd5cfc1b32c8c0ee3c5c454607488b00ea00cd06a9e301a892",
    "size": 40980802,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site20/Site20_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site23-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:39:35Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site23/Site23_final_adj_5mpp_surf.tif",
+   "sha256": "12d280a59cd7580415f6bada638d0abe025ce6727541fddf68d5dc371a6c94cf",
+   "size": 70586804,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site23/Site23_final_adj_5mpp_surf.tif"
   }
  },
  "products": {
   "dem": {
-   "bytes": 239121006,
-   "files": 2006,
-   "generated": "2026-11-14T10:24:16Z",
+   "bytes": 459733349,
+   "files": 3853,
+   "generated": "2026-11-14T10:37:59Z",
    "job": "pipeline/jobs/dem_tiles.py",
    "kind": "tree",
    "path": "web/dem/SHA256SUMS",
-   "sha256": "5083df6f7f37a9e347328534cb518df3bd8d1762265ea1d9bae2931626e69ccb",
-   "size": 156712
+   "sha256": "302879c084ad8f573c5553aa8ea172a7d0291c38f71fcbfdd83c7c37ae37a6ce",
+   "size": 304046
   },
   "ephem": {
    "bytes": 4631904,
@@ -252,6 +292,16 @@
    "sha256": "15ff2085db0ad8ba7ec9a8065888fdc9f1edf7cfde45191c8de6cb6881c9751d",
    "size": 902
   },
+  "err": {
+   "bytes": 81588362,
+   "files": 1242,
+   "generated": "2026-11-14T10:37:58Z",
+   "job": "pipeline/jobs/dem_tiles.py",
+   "kind": "tree",
+   "path": "web/err/SHA256SUMS",
+   "sha256": "d6bbabc70bf8d6224ae2309ec5498442c89ef96a958e71c7cd287f30606f074b",
+   "size": 95845
+  },
   "psr": {
    "generated": "2026-11-14T10:34:38Z",
    "job": "pipeline/jobs/psr.py",
@@ -260,11 +310,11 @@
    "size": 3379379
   },
   "sites": {
-   "generated": "2026-11-14T10:35:40Z",
+   "generated": "2026-11-14T10:43:33Z",
    "job": "pipeline/jobs/sites.py",
    "path": "web/sites.json",
-   "sha256": "9ba845c7deb56a2dcb74de1972f31f5fa2c94980946382fe1eda9efb0a0c5879",
-   "size": 13391
+   "sha256": "b0858c63668e0fbc62c6b13b38ebdecd6ca482a89940e68fc3f4bded56b6b7d0",
+   "size": 15935
   }
  },
  "version": 1

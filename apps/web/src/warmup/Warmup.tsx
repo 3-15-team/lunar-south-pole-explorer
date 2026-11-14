@@ -20,8 +20,8 @@ float craters(vec3 p) {
   for (int s = 0; s < 3; s++) {
     float sc = 6.0 * pow(2.6, float(s));
     vec3 q = p * sc; vec3 c = floor(q);
-    for (int k = 0; k < 8; k++) {
-      vec3 o3 = vec3(float(k & 1), float((k >> 1) & 1), float((k >> 2) & 1));
+    for (int k = 0; k < 27; k++) {
+      vec3 o3 = vec3(float(k % 3), float((k / 3) % 3), float(k / 9)) - 1.0;
       vec3 cc = c + o3; vec3 cp = cc + vec3(h3(cc), h3(cc + 3.1), h3(cc + 7.7));
       float r = 0.25 + 0.3 * h3(cc + 1.3);
       float d = length(q - cp) / r;

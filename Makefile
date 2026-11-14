@@ -1,6 +1,6 @@
 # Lunar South Pole Site Explorer — NASA Space Apps 2026
 # Quick start (local):  make setup && make data-min && make dev   → http://localhost:5173
-# Primary demo:         make up                                     → http://localhost:8080
+# Primary demo:         make up                                     → http://localhost:8088
 # GNU make 3.81 compatible (macOS default).
 
 SHELL          := /bin/bash
@@ -14,7 +14,7 @@ DATA_DIR       ?= $(ROOT)/data
 DATA_TIER      ?= 1
 WEB_PORT       ?= 5173
 COMPUTE_PORT   ?= 8000
-COMPOSE_PORT   ?= 8080
+COMPOSE_PORT   ?= 8088
 DEPLOY_TARGET  ?= none
 DATA_BASE_URL  ?=
 COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-directory $(ROOT)
@@ -101,7 +101,7 @@ web-build: ## Production build of the SPA -> apps/web/dist
 web-preview: web-build ## Preview the production build (:4173)
 	cd $(WEB) && $(NPM) run preview
 
-up: ## docker compose up: nginx(web+data) + compute  -> http://localhost:8080
+up: ## docker compose up: nginx(web+data) + compute  -> http://localhost:8088
 	$(COMPOSE) up -d --build
 	@echo "open http://localhost:$(COMPOSE_PORT)"
 

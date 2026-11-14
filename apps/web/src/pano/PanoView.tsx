@@ -89,7 +89,7 @@ export default function PanoView() {
       dirty = false;
       const w = wrap.current?.clientWidth ?? 800;
       const h = wrap.current?.clientHeight ?? 600;
-      scene.update(time.peek(), lighting.peek() === 'enhanced' ? 0.035 : 0);
+      scene.update(time.peek(), lighting.peek() === 'enhanced' ? 0.02 : 0);
       scene.render(w, h);
       setHeading(scene.state.heading);
     };
@@ -130,13 +130,13 @@ export default function PanoView() {
       </div>
       <div class="pano-hud">
         <div class="hud-box">
-          <div class="hud-big">{m?.sunNext ? `${sunUp ? 'Sunset' : 'Sunrise'} in ${fmtDuration(m.sunNext.t - t)}` : 'Sun: no change within 60 d'}</div>
+          <div class="hud-big">{m?.sunNext ? `${sunUp ? 'Sunset' : 'Sunrise'} in ${fmtDuration(m.sunNext.t - t)}` : sunUp ? 'Sun up for 60+ d' : 'No Sun for 60+ d'}</div>
           <div>
             ☀ el {fmtDeg(now?.sunEl)} · {fmtPct(now?.fSun)} of disk
           </div>
         </div>
         <div class="hud-box">
-          <div class="hud-big">{m?.earthNext ? `${earthUp ? 'Earthset' : 'Earthrise'} in ${fmtDuration(m.earthNext.t - t)}` : 'Earth: steady'}</div>
+          <div class="hud-big">{m?.earthNext ? `${earthUp ? 'Earthset' : 'Earthrise'} in ${fmtDuration(m.earthNext.t - t)}` : earthUp ? 'Earth up for 60+ d' : 'No Earth for 60+ d'}</div>
           <div>
             🜨 el {fmtDeg(now?.earthEl)} · {fmtPct(now?.fEarth)} visible
           </div>

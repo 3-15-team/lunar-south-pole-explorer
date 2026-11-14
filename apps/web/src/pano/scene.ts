@@ -105,7 +105,7 @@ uniform float uDiscFrac;   // disc radius as a fraction of the quad half-size
 void main() {
   float r = length(vUv);
   float disc = 1.0 - smoothstep(uDiscFrac * 0.97, uDiscFrac, r);
-  float glare = 0.35 * exp(-(r / uDiscFrac - 1.0) * 1.6) * step(uDiscFrac, r);
+  float glare = (0.55 * exp(-(r / uDiscFrac - 1.0) * 0.9) + 0.25 * exp(-(r / uDiscFrac - 1.0) * 0.25)) * step(uDiscFrac, r);
   float limb = 0.75 + 0.25 * sqrt(max(0.0, 1.0 - (r / uDiscFrac) * (r / uDiscFrac)));
   vec3 c = vec3(1.0, 0.97, 0.9) * disc * limb + vec3(1.0, 0.85, 0.6) * glare;
   float a = max(disc, glare);
@@ -195,7 +195,7 @@ export class PanoScene {
         uEarth: { value: new THREE.Vector3(0, 0.1, -1) },
         uEarthPhase: { value: 0.5 },
         uAmbient: { value: 0.03 },
-        uExposure: { value: 7 },
+        uExposure: { value: 11 },
         uCam: { value: new THREE.Vector3() },
       },
     });
@@ -324,12 +324,13 @@ export class PanoScene {
     for (let j = 0; j < N - 1; j++)
       for (let i = 0; i < N - 1; i++) {
         const a0 = j * N + i;
+        // counter-clockwise seen from above (+Y): normals point up
         idx[p++] = a0;
-        idx[p++] = a0 + N;
-        idx[p++] = a0 + 1;
         idx[p++] = a0 + 1;
         idx[p++] = a0 + N;
+        idx[p++] = a0 + 1;
         idx[p++] = a0 + N + 1;
+        idx[p++] = a0 + N;
       }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -431,8 +432,8 @@ export class PanoScene {
       m.scale.set(size, size, 1);
       m.lookAt(this.camera.position);
     };
-    place(this.sun, sw, rS, 8);
-    (this.sun.material as THREE.ShaderMaterial).uniforms.uDiscFrac.value = 1 / 8;
+    place(this.sun, sw, rS, 24);
+    (this.sun.material as THREE.ShaderMaterial).uniforms.uDiscFrac.value = 1 / 24;
     place(this.earth, ew, rE, 1);
     // Sun direction seen from Earth, expressed in the Earth quad's frame
     this.earth.updateMatrixWorld();

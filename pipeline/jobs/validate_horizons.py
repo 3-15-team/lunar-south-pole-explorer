@@ -16,7 +16,6 @@ import math
 import time
 import urllib.parse
 import urllib.request
-from pathlib import Path
 
 import numpy as np
 

@@ -85,7 +85,7 @@ export const mapView = signal<{ x: number; y: number; res: number } | null>(null
 
 // --- transient UI state
 export const playing = signal(false);
-export const playSpeed = signal(12); // simulated hours per real second
+export const playSpeed = signal(24); // simulated hours per real second
 export const warmupDone = signal(false);
 export const status = signal<string>('');
 export const progress = signal<{ done: number; total: number } | null>(null);

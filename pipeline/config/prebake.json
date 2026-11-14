@@ -1,0 +1,10 @@
+{
+ "_comment": "Pre-baked suitability heatmaps (static fallback when services/compute is down) -> data/web/heatmaps. Same engine as POST /api/v1/heatmap.",
+ "defaults": {"footprintM": 50, "dteThreshold": 0.5, "stepHours": 2, "candidates": 10, "bbox": null},
+ "items": [
+  {"preset": "lander", "t0": "2026-12-01T00:00:00Z", "t1": "2026-12-15T00:00:00Z", "label": "Lander, 1-15 Dec 2026"},
+  {"preset": "base", "t0": "2026-12-01T00:00:00Z", "t1": "2026-12-15T00:00:00Z", "label": "Base, 1-15 Dec 2026"},
+  {"preset": "lander", "t0": "2027-01-01T00:00:00Z", "t1": "2028-01-01T00:00:00Z", "label": "Lander, year 2027"},
+  {"preset": "base", "t0": "2027-01-01T00:00:00Z", "t1": "2028-01-01T00:00:00Z", "label": "Base, year 2027"}
+ ]
+}

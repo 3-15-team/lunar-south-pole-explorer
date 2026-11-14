@@ -49,6 +49,54 @@ def dem_header(site: str, remote: bool, cache: dict) -> dict | None:
     return info
 
 
+def dem_summit(site: str, bbox: list[float], store: T.TileStore, frac: float = 0.6) -> dict | None:
+    """Highest DEM point inside the central ``frac`` of the site DEM (5 m GeoTIFF when downloaded, else the finest
+    global tile level over the same window). Ties -> first in row-major order (reproducible)."""
+    import numpy as np
+    import rasterio
+
+    m = (1.0 - frac) / 2.0
+    local = sorted((RAW / "lola5" / site).glob("*_surf.tif"))
+    if local:
+        with rasterio.open(local[0]) as ds:
+            r0, r1 = int(round(ds.height * m)), int(round(ds.height * (1 - m)))
+            c0, c1 = int(round(ds.width * m)), int(round(ds.width * (1 - m)))
+            a = ds.read(1, window=((r0, r1), (c0, c1))).astype(np.float64)
+            if ds.nodata is not None and not math.isnan(ds.nodata):
+                a[a == ds.nodata] = np.nan
+            k = int(np.nanargmax(a))
+            i, j = divmod(k, a.shape[1])
+            t = ds.transform
+            x = t.c + (c0 + j + 0.5) * t.a
+            y = t.f + (r0 + i + 0.5) * t.e
+            return {"x": x, "y": y, "h": float(a[i, j]), "res": t.a, "from": "5 m site DEM"}
+    zs = [z for z in store.levels() if z <= 6]
+    if not zs:
+        return None
+    z = max(zs)
+    w = bbox[2] - bbox[0]
+    hgt = bbox[3] - bbox[1]
+    xmin, xmax = bbox[0] + m * w, bbox[2] - m * w
+    ymin, ymax = bbox[1] + m * hgt, bbox[3] - m * hgt
+    best = None
+    for tx, ty in T.tiles_in_bbox(z, xmin, ymin, xmax, ymax):
+        a = store.load(z, tx, ty)
+        if a is None:
+            continue
+        xs, ys = T.pixel_centres(z, tx, ty)
+        X, Y = np.meshgrid(xs, ys)
+        inside = (X >= xmin) & (X <= xmax) & (Y >= ymin) & (Y <= ymax) & np.isfinite(a)
+        if not inside.any():
+            continue
+        v = np.where(inside, a, -np.inf)
+        k = int(np.argmax(v))
+        i, j = divmod(k, a.shape[1])
+        if best is None or v[i, j] > best["h"]:
+            best = {"x": float(xs[j]), "y": float(ys[i]), "h": float(v[i, j]), "res": T.res(z),
+                    "from": f"{T.res(z):.0f} m global DEM tiles (5 m DEM not downloaded yet)"}
+    return best
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--no-remote", action="store_true", help="do not read headers of not-downloaded DEMs")
@@ -68,12 +116,23 @@ def main(argv=None) -> None:
             if hdr:
                 bx = hdr["bbox"]
                 cx, cy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
-                lat, lon = xy_to_ll(cx, cy)
-                e["lat"], e["lon"] = round(float(lat), 5), round(float(lon), 5)
-                e["coordQuality"] = "dem-centre"
+                clat, clon = xy_to_ll(cx, cy)
+                e["demCentre"] = {"lat": round(float(clat), 5), "lon": round(float(clon), 5),
+                                  "x": round(cx, 1), "y": round(cy, 1)}
                 e["demBbox"] = bx
                 e["hiRes"] = {"z": 9, "bbox": bx} if pg in z9_sites else None
                 e["dem"] = pg
+                top = dem_summit(pg, bx, store)
+                if top is not None:
+                    lat, lon = xy_to_ll(top["x"], top["y"])
+                    e["lat"], e["lon"] = round(float(lat), 5), round(float(lon), 5)
+                    e["coordQuality"] = "dem-summit"
+                    e["note"] = (f"{e.get('note', '').replace(' Centre of the 5 m LOLA DEM.', '')} Point = highest "
+                                 f"terrain within the central 60% of the PGDA 5 m DEM ({top['from']}): "
+                                 f"{top['h']:.0f} m; DEM centre kept in demCentre.").strip()
+                else:
+                    e["lat"], e["lon"] = e["demCentre"]["lat"], e["demCentre"]["lon"]
+                    e["coordQuality"] = "dem-centre"
             else:
                 e["coordQuality"] = "approx"
                 e["note"] = (e.get("note", "") + " (DEM header unavailable; centre from the published DEM listing)").strip()

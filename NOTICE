@@ -1,0 +1,10 @@
+Lunar South Pole Site Explorer
+Copyright 2026 Team 3-15 (NASA Space Apps Challenge 2026)
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product uses NASA open data (LRO LOLA products from the NASA GSFC Planetary
+Geodesy Data Archive; NAIF SPICE generic kernels from NASA/JPL), which are not
+subject to copyright in the United States. Third-party open-source components and
+their licences are listed in docs/REFERENCES.md. Surface textures are procedural
+(synthetic) and contain no imagery.

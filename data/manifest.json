@@ -210,6 +210,16 @@
    "size": 40980806,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_surf.tif"
   },
+  "site5m-Site04-toterr": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:47:22Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site04/Site04_final_adj_5mpp_toterr.tif",
+   "sha256": "416c4baa3b64def0182bb3379a1a9228482efd8ce32a39309ea8de5d0330fbe6",
+   "size": 40980808,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_toterr.tif"
+  },
   "site5m-Site06-surf": {
    "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
    "fetched_utc": "2026-11-14T10:11:34Z",
@@ -239,6 +249,16 @@
    "sha256": "38aaee10bb4da4d63e7427aa1ca25c79bdbc649d212079a04990e135462091f8",
    "size": 40980808,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site07/Site07_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site07-toterr": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:48:57Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site07/Site07_final_adj_5mpp_toterr.tif",
+   "sha256": "9be3e4b989ad3164ab5c9036fadab548e5c1c027d056b96f5ef055362c4b1e3e",
+   "size": 40980810,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site07/Site07_final_adj_5mpp_toterr.tif"
   },
   "site5m-Site11-surf": {
    "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",

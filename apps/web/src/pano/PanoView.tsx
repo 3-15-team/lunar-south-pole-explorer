@@ -89,7 +89,7 @@ export default function PanoView() {
       dirty = false;
       const w = wrap.current?.clientWidth ?? 800;
       const h = wrap.current?.clientHeight ?? 600;
-      scene.update(time.peek(), lighting.peek() === 'enhanced' ? 0.02 : 0);
+      scene.update(time.peek(), lighting.peek() === 'enhanced' ? 0.05 : 0);
       scene.render(w, h);
       setHeading(scene.state.heading);
     };

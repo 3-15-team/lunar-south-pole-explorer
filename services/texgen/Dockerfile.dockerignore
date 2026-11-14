@@ -1,0 +1,4 @@
+*
+!services/texgen/requirements.txt
+!services/texgen/app/**
+**/__pycache__

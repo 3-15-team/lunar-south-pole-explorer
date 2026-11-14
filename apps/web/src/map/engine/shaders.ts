@@ -331,7 +331,11 @@ void main() {
     }
   }
   float albedo = 0.12 * (1.0 + 0.35 * regolith(p, px)) * (1.0 + 0.25 * smoothstep(15.0, 35.0, slopeDeg));
-  float rad = albedo * (lambert * fS * uFlux + uAmbient);
+  // Enhanced mode: faint fill light from the anti-solar azimuth at 35° (moves with the Sun; readability only)
+  vec2 sh = length(sE.xy) > 1e-6 ? normalize(sE.xy) : vec2(0.0, 1.0);
+  vec3 fillDir = vec3(-sh * 0.819, 0.574);
+  float fill = uAmbient * (0.3 + 0.7 * max(dot(nE, fillDir), 0.0));
+  float rad = albedo * (lambert * fS * uFlux + fill);
   vec3 lit = vec3(1.0 - exp(-uExposure * rad));
   lit *= vec3(1.0, 0.985, 0.96);
   vec3 col = lit;

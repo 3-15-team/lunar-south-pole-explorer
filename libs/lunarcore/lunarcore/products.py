@@ -15,7 +15,6 @@ import numpy as np
 from .ephemeris import Ephemeris
 from .tiles import TileStore
 
-
 ANALYSIS_VERSION = "lunarcore-analysis-1"  # bump when analysis results change for the same inputs
 
 
@@ -35,9 +34,23 @@ class DataStore:
         self.root = Path(root) if root else data_dir()
         self.web = self.root / "web"
         self.work = self.root / "work"
-        self.cache_dir = self.work / "cache"
+        self.cache_dir = self._writable_cache(Path(os.environ.get("CACHE_DIR", self.work / "cache")))
         self._lock = threading.Lock()
         self._region_res = region_res or int(os.environ.get("REGION_RES", "240"))
+
+    @staticmethod
+    def _writable_cache(p: Path) -> Path:
+        """Content-addressed cache dir; falls back to /tmp when DATA_DIR is mounted read-only."""
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            probe = p / ".probe"
+            probe.write_text("")
+            probe.unlink()
+            return p
+        except OSError:
+            fb = Path(os.environ.get("TMPDIR", "/tmp")) / "compute-cache"
+            fb.mkdir(parents=True, exist_ok=True)
+            return fb
 
     # ---------------------------------------------------------------- products
     @cached_property

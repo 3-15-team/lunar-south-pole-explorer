@@ -1,0 +1,8 @@
+# BuildKit per-Dockerfile ignore (context = project root): ship only what the image needs.
+*
+!services/compute/requirements.txt
+!services/compute/app/**
+!libs/lunarcore/pyproject.toml
+!libs/lunarcore/lunarcore/**
+**/__pycache__
+**/*.pyc

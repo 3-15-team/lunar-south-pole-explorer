@@ -292,16 +292,18 @@ export default function MapView() {
     if (!eng) return;
     setCandBusy(true);
     setTimeout(() => {
-      const r = eng.candidates(8, 400);
+      // pool = up to 40 distinct spots (non-maximum suppressed); robustness = share of
+      // Monte-Carlo weight draws in which a spot stays in the top 5 of that pool
+      const r = eng.candidates(40, 0);
       const pr = PRESETS[preset.peek()];
       if (!r) {
         setCands([]);
         setCandBusy(false);
         return;
       }
-      const pool: Candidate[] = r.pool.map((c, i) => ({ i, x: c.x, y: c.y, score: c.score, features: c.f }));
-      const cs: Candidate[] = r.cands.map((c) => ({ i: pool.findIndex((q) => q.x === c.x && q.y === c.y), x: c.x, y: c.y, score: c.score, features: c.f }));
-      const stab = rankStability(pool, cs, pr.weights, footprint.peek(), slopeLimit.peek(), pr.darkRef, 200, 10);
+      const pool: Candidate[] = r.cands.map((c, i) => ({ i, x: c.x, y: c.y, score: c.score, features: c.f }));
+      const cs = pool.slice(0, 8);
+      const stab = rankStability(pool, cs, pr.weights, footprint.peek(), slopeLimit.peek(), pr.darkRef, 200, 5);
       const out = cs.map((c, k) => ({ ...c, rankStability: stab[k], ...xyToLatLon(c.x, c.y) }));
       candSrc.current.clear();
       out.forEach((c, k) => {
@@ -404,8 +406,8 @@ export default function MapView() {
                     <button class="linkish" onClick={() => (siteRef.value = customFromXY(c.x, c.y, `Candidate ${(c.score * 100).toFixed(0)}`))}>
                       score {(c.score * 100).toFixed(0)} · sun {fmtPct(c.features.illum)} · night {fmtHours(c.features.dark)}
                     </button>
-                    <span class={`stab ${c.rankStability! >= 0.8 ? 'good' : c.rankStability! >= 0.5 ? '' : 'bad'}`} title="Share of 200 Monte-Carlo weight draws in which this spot stays in the top 10 (robustness, not probability)">
-                      {Math.round(c.rankStability! * 100)}% stable
+                    <span class={`stab ${c.rankStability! >= 0.8 ? 'good' : c.rankStability! >= 0.5 ? '' : 'bad'}`} title="Share of 200 Monte-Carlo weight draws (Dirichlet around the preset) in which this spot stays in the top 5 of the 40 best distinct spots in view — robustness, not probability">
+                      {Math.round(c.rankStability! * 100)}% top-5
                     </span>
                   </li>
                 ))}

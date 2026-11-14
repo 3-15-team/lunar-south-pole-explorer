@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { ComponentType } from 'preact';
 import { audience, mode, playing, progress, siteError, status, warmupDone } from '../state/store';
 import { HeatCalendar } from './HeatCalendar';
-import { EduPanel, MetricTiles } from './Metrics';
+import { EduPanel, MetricTiles, Verdict } from './Metrics';
 import { ScenarioPanel, SitePanel } from './Panels';
 import { SkyPlot } from './SkyPlot';
 import { Timeline } from './Timeline';
@@ -91,6 +91,7 @@ export function App() {
         )}
       </main>
       <aside class="right">
+        <Verdict />
         <SkyPlot />
         <MetricTiles />
         <EduPanel />

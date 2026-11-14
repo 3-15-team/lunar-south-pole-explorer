@@ -89,7 +89,9 @@ void main() {
   float albedo = 0.12 * (1.0 + 0.45 * n0) * (1.0 + 0.2 * smoothstep(15.0, 35.0, slope));
   vec3 eDir = normalize(vec3(uEarth.x, -uEarth.z, uEarth.y));
   float earthshine = 2.0e-4 * uEarthPhase * max(dot(nE, eDir), 0.0);
-  float rad = albedo * (lambert * fS * uFlux + uAmbient * (0.6 + 0.4 * nE.z) + earthshine);
+  vec2 sh = length(s.xy) > 1e-6 ? normalize(s.xy) : vec2(0.0, 1.0);
+  float fill = uAmbient * (0.3 + 0.7 * max(dot(nE, vec3(-sh * 0.819, 0.574)), 0.0));
+  float rad = albedo * (lambert * fS * uFlux + fill + earthshine);
   vec3 col = vec3(1.0 - exp(-uExposure * rad)) * vec3(1.0, 0.985, 0.965);
   gl_FragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
 }`;

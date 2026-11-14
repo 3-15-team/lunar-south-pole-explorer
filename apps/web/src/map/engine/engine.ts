@@ -523,7 +523,7 @@ export class TerrainEngine {
     gl.uniform4f(u('uSun'), sx, sy, sz, Math.asin(SUN_RADIUS_KM / ds));
     gl.uniform1f(u('uFlux'), (AU_KM / ds) ** 2);
     gl.uniform1f(u('uExposure'), 22);
-    gl.uniform1f(u('uAmbient'), p.lighting === 'enhanced' ? 0.06 : 0.0);
+    gl.uniform1f(u('uAmbient'), p.lighting === 'enhanced' ? 0.09 : 0.0);
     gl.uniform1i(u('uShadows'), 1);
     gl.uniform1f(u('uShadowAlpha'), interacting ? 0.06 : 0.025);
     gl.activeTexture(gl.TEXTURE2);

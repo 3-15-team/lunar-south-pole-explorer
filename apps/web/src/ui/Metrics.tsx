@@ -143,3 +143,30 @@ export function EduPanel() {
     </details>
   );
 }
+
+type Grade = 'good' | 'fair' | 'poor';
+const grade = (v: number, good: number, fair: number, higherBetter = true): Grade =>
+  higherBetter ? (v >= good ? 'good' : v >= fair ? 'fair' : 'poor') : v <= good ? 'good' : v <= fair ? 'fair' : 'poor';
+
+/** One-glance verdict for the selected site and interval (the "first 5 seconds"). */
+export function Verdict() {
+  const m = metricsState.value?.metrics;
+  const s = site.value;
+  if (!m || !s) return null;
+  const gi = grade(m.illumFrac, 0.7, 0.4);
+  const gd = grade(m.longestDarkH, 24, 72, false);
+  const ge = grade(m.earthFrac, 0.5, 0.2);
+  const order: Record<Grade, number> = { good: 0, fair: 1, poor: 2 };
+  const worst = [gi, gd, ge].reduce((a, b) => (order[b] > order[a] ? b : a));
+  const headline = worst === 'good' ? 'Viable window' : worst === 'fair' ? 'Marginal window' : 'Risky window';
+  return (
+    <div class={`verdict-box ${worst}`} role="status">
+      <div class="verdict-head">{headline}</div>
+      <div class="verdict-chips">
+        <span class={`vchip ${gi}`}>☀ {fmtPct(m.illumFrac)} sunlight</span>
+        <span class={`vchip ${gd}`}>☾ longest night {fmtHours(m.longestDarkH)}</span>
+        <span class={`vchip ${ge}`}>🜨 Earth {fmtPct(m.earthFrac)}</span>
+      </div>
+    </div>
+  );
+}

@@ -26,7 +26,7 @@ export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
-        data-sites data-psr data-horizon data-heatmaps data-micro data-pull data-status validate dev web-dev \
+        data-sites data-psr data-horizon data-heatmaps data-micro data-outer data-pull data-status validate dev web-dev \
         compute-dev web-build web-preview up up-ai down logs ps lint typecheck test test-py test-web \
         build smoke verify dist serve-dist deploy clean clean-data
 
@@ -54,12 +54,12 @@ data: data-fetch data-build ## Download sources (tier <= DATA_TIER) and build ev
 
 data-min: ## Smallest working set: kernels + 80 m DEM -> ephemeris, tiles, sites, PSR
 	$(PY) pipeline/jobs/download.py --tier 0
-	$(MAKE) data-ephem data-tiles data-sites data-psr data-micro
+	$(MAKE) data-ephem data-tiles data-sites data-psr data-micro data-outer
 
 data-fetch: ## Resumable, verified downloads into data/raw (records data/manifest.json)
 	$(PY) pipeline/jobs/download.py --tier $(DATA_TIER)
 
-data-build: data-ephem data-tiles data-sites data-psr data-horizon data-heatmaps data-micro ## Build all products (idempotent)
+data-build: data-ephem data-tiles data-sites data-psr data-horizon data-heatmaps data-micro data-outer ## Build all products (idempotent)
 
 data-ephem: ## Sun/Earth tables in MOON_ME 2026-2036 -> data/web/ephem
 	$(PY) -m pipeline.jobs.ephemeris
@@ -75,6 +75,9 @@ data-psr: ## PSR polygons -> data/web/psr.geojson
 
 data-horizon: ## Region horizon maps (server-side) -> data/work
 	$(PY) -m pipeline.jobs.horizon_maps
+
+data-outer: ## Context Moon outside 80°S for the map: LOLA LDEM_16 -> SPS 2048² (seconds) -> data/web/outer
+	$(PY) -m pipeline.jobs.outer_dem
 
 data-micro: ## Statistical micro-relief tiles for the panorama (seconds, deterministic) -> data/web/micro
 	$(PY) -m pipeline.jobs.micro_relief

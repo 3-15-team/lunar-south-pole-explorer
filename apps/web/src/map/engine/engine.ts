@@ -4,7 +4,7 @@
 import type { Ephemeris } from '../../core/ephemeris';
 import { EARTH_RADIUS_KM, SUN_RADIUS_KM, AU_KM } from '../../core/geo';
 import { score, type Features, type Weights } from '../../core/suitability';
-import { DemClient, TILE } from '../../data/dem';
+import { DemClient, TILE, decodeTile, inflateIfGzip } from '../../data/dem';
 import { DISPLAY_FRAG, FEATURE_FRAG, HORIZON_FRAG, INTERVAL_FRAG, VERT } from './shaders';
 
 export type EngineLayer = 'relief' | 'shadow' | 'illum' | 'earth' | 'dark' | 'slope' | 'suit';
@@ -54,6 +54,13 @@ export class TerrainEngine {
   private farTex: WebGLTexture;
   private farRect: [number, number, number, number] = [0, 0, 1, 1];
   private farMaxLod = 0;
+  /** Context Moon outside the polar coverage (data/web/outer, LOLA LDEM_16): display pass only. */
+  private outerTex: WebGLTexture | null = null;
+  private outerRect: [number, number, number, number] = [0, 0, 1, 1];
+  private outerMaxLod = 0;
+  private outerRho = 0;
+  /** Outermost map coordinate the view may show (equator when the context Moon is available). */
+  static readonly OUTER_HALF = 3_480_000;
   private near: { tex: WebGLTexture; z: number; tx0: number; ty0: number; n: number; valid: boolean; maxLod: number; mipDirty: boolean; gen: number; pending: number; uploads: number } | null = null;
   private grid: Grid | null = null;
   private pendingGrid: Grid | null = null;
@@ -93,6 +100,9 @@ export class TerrainEngine {
     this.ephTex = gl.createTexture()!;
     this.farTex = gl.createTexture()!;
     this.initFar();
+    this.initOuter().catch(() => {
+      /* no context Moon: the map ends at the coverage edge as before */
+    });
   }
 
   // ------------------------------------------------------------ GL helpers
@@ -189,6 +199,33 @@ export class TerrainEngine {
         }
       });
     }
+  }
+
+  // ------------------------------------------------------------ outer texture (context Moon)
+  private async initOuter(): Promise<void> {
+    const base = this.dem.baseUrl + 'outer/';
+    const r = await fetch(base + 'index.json');
+    if (!r.ok) return;
+    const idx = (await r.json()) as { file: string; x0: number; y0: number; res: number; n: number; maxRho: number };
+    const b = await fetch(base + idx.file);
+    if (!b.ok) return;
+    const h = decodeTile(await inflateIfGzip(await b.arrayBuffer()));
+    const gl = this.gl;
+    const t = this.demTex(idx.n);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, idx.n, idx.n, gl.RED, gl.FLOAT, TerrainEngine.clean(h));
+    if (this.hw) gl.generateMipmap(gl.TEXTURE_2D);
+    this.outerTex = t;
+    this.outerRect = [idx.x0, idx.y0, idx.res, idx.n];
+    this.outerMaxLod = this.hw ? Math.floor(Math.log2(idx.n)) : 0;
+    this.outerRho = idx.maxRho;
+    this.onNeedRender();
+  }
+
+  /** True once the context Moon outside the coverage is loaded. */
+  get hasOuter(): boolean {
+    return !!this.outerTex;
   }
 
   // ------------------------------------------------------------ near texture (view level)
@@ -293,7 +330,13 @@ export class TerrainEngine {
   private wantGrid(fs: FrameLike): void {
     const p = this.params;
     if (!p || !NEEDS_GRID.includes(p.layer)) return;
-    const [minx, miny, maxx, maxy] = fs.extent;
+    // analysis exists only inside the polar coverage: never spend the grid on the context Moon
+    const R = this.dem.maxRho;
+    const minx = Math.max(fs.extent[0], -R);
+    const miny = Math.max(fs.extent[1], -R);
+    const maxx = Math.min(fs.extent[2], R);
+    const maxy = Math.min(fs.extent[3], R);
+    if (minx >= maxx || miny >= maxy) return;
     const mx = (maxx - minx) * 0.08;
     const my = (maxy - miny) * 0.08;
     const w = maxx - minx + 2 * mx;
@@ -542,6 +585,13 @@ export class TerrainEngine {
     gl.uniform1f(u('uFootM'), p.footprint);
     gl.uniform1f(u('uSlopeLimit'), p.slopeLimit);
     gl.uniform1f(u('uDarkRef'), p.darkRef);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this.outerTex ?? this.farTex);
+    gl.uniform1i(u('uOuter'), 4);
+    gl.uniform4fv(u('uOuterRect'), this.outerRect);
+    gl.uniform1f(u('uOuterMaxLod'), this.outerMaxLod);
+    gl.uniform1f(u('uOuterValid'), this.outerTex ? 1 : 0);
+    gl.uniform1f(u('uOuterRho'), this.outerRho);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, w, h);
     gl.bindVertexArray(this.vao);

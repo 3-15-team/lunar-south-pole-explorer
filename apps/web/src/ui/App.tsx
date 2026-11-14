@@ -207,7 +207,7 @@ export function App() {
         <div class="statusline" aria-live="polite">
           <span>{siteError.value ? '' : status.value}</span>
           <span class="provenance">
-            Terrain: NASA LRO/LOLA (PGDA, Barker et al.) · Ephemeris: JPL DE440 + lunar ME frame via NAIF SPICE · Surface texture is procedural (synthetic), not imagery
+            Terrain: NASA LRO/LOLA (PGDA, Barker et al.; outside 80°S: LOLA global 16 px/deg, context only) · Ephemeris: JPL DE440 + lunar ME frame via NAIF SPICE · Surface texture is procedural (synthetic), not imagery
           </span>
         </div>
       </footer>

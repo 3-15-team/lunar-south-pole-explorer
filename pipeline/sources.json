@@ -141,6 +141,24 @@
    ],
    "license": "Public domain (NASA GSFC PGDA)",
    "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory"
+  },
+  {
+   "id": "ldem-global-16",
+   "tier": 0,
+   "dest": "lola_global/ldem_16.img",
+   "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.img",
+   "size": 33177600,
+   "license": "Public domain (NASA PDS Geosciences Node, LRO LOLA GDR)",
+   "description": "LOLA global gridded DEM, 16 px/deg simple cylindrical, int16 LSB, height = DN*0.5 m above 1737.4 km; context Moon outside 80S on the map"
+  },
+  {
+   "id": "ldem-global-16-lbl",
+   "tier": 0,
+   "dest": "lola_global/ldem_16.lbl",
+   "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.lbl",
+   "size": 5121,
+   "license": "Public domain (NASA PDS Geosciences Node, LRO LOLA GDR)",
+   "description": "PDS label of ldem_16.img"
   }
  ]
 }

@@ -296,7 +296,8 @@ export class PanoScene {
       for (let c = 0; c < n; c++) {
         const e = -half + (c + 0.5) * sp;
         const [x, y] = this.toGrid(e, nn);
-        const h = this.dem.height(x, y, sp);
+        // coarse source data (5 m DEM absent here) is upsampled with the configured cubic, not bilinear
+        const h = this.interp === 'bilinear' ? this.dem.height(x, y, sp) : this.dem.heightCubic(x, y, sp, ...INTERP_BC[this.interp]);
         out[r * n + c] = (Number.isFinite(h) ? h : this.site.hTerrain) - this.site.hTerrain - (e * e + nn * nn) / (2 * R_MOON_M);
       }
     }

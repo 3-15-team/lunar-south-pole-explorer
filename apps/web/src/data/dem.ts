@@ -2,6 +2,7 @@
 // LRU cache and fast multi-level sampling. Used by the site worker, the map engine
 // and the panorama.
 import type { DemSampler } from '../core/horizon';
+import { mnKernel } from '../core/interp';
 
 export interface DemLevel {
   z: number;
@@ -162,25 +163,22 @@ export class DemClient implements DemSampler {
     this.lastKey = -1;
   }
 
-  /** Value at global pixel (gx, gy) of level z, falling back to coarser levels. */
-  pixel(z: number, gx: number, gy: number): number {
-    for (let zz = z; zz >= 0; zz--) {
-      const s = z - zz;
-      const px = gx >> s;
-      const py = gy >> s;
-      const k = key(zz, px >> 8, py >> 8);
-      let t: Float32Array | null | undefined = k === this.lastKey ? this.lastTile : this.cache.get(k);
-      if (t) {
-        this.lastKey = k;
-        this.lastTile = t;
-        return t[(py & 255) * TILE + (px & 255)];
-      }
-    }
-    return NaN;
+  /** Value at global pixel (gx, gy) of level z only; -Infinity when that tile is not loaded. */
+  private pixelAt(z: number, gx: number, gy: number): number {
+    if (gx < 0 || gy < 0 || gx >= TILE << z || gy >= TILE << z) return -Infinity;
+    const k = key(z, gx >> 8, gy >> 8);
+    const t = k === this.lastKey ? this.lastTile : this.cache.get(k);
+    if (!t) return -Infinity;
+    this.lastKey = k;
+    this.lastTile = t;
+    return t[(gy & 255) * TILE + (gx & 255)];
   }
 
-  /** Bilinear height at level z (pixel-is-area centres); NaN if missing. */
-  heightAtLevel(z: number, x: number, y: number): number {
+  /**
+   * Bilinear height at exactly level z (pixel-is-area centres), mirroring lunarcore.tiles.sample_level:
+   * NaN neighbours are skipped (weights renormalised); -Infinity when any neighbour's tile is missing.
+   */
+  sampleLevel(z: number, x: number, y: number): number {
     const r = this.res(z);
     const fx = (x - this.x0) / r - 0.5;
     const fy = (this.y0 - y) / r - 0.5;
@@ -188,15 +186,72 @@ export class DemClient implements DemSampler {
     const gy = Math.floor(fy);
     const ax = fx - gx;
     const ay = fy - gy;
-    const h00 = this.pixel(z, gx, gy);
-    const h10 = this.pixel(z, gx + 1, gy);
-    const h01 = this.pixel(z, gx, gy + 1);
-    const h11 = this.pixel(z, gx + 1, gy + 1);
-    const v = (h00 * (1 - ax) + h10 * ax) * (1 - ay) + (h01 * (1 - ax) + h11 * ax) * ay;
-    if (v === v) return v;
-    // edge of data: nearest valid neighbour
-    const c = [h00, h10, h01, h11].filter((q) => q === q);
-    return c.length ? c[0] : NaN;
+    let acc = 0;
+    let wsum = 0;
+    for (let dy = 0; dy < 2; dy++) {
+      const wy = dy ? ay : 1 - ay;
+      for (let dx = 0; dx < 2; dx++) {
+        const v = this.pixelAt(z, gx + dx, gy + dy);
+        if (v === -Infinity) return -Infinity;
+        if (v !== v) continue;
+        const w = (dx ? ax : 1 - ax) * wy;
+        acc += w * v;
+        wsum += w;
+      }
+    }
+    return wsum <= 1e-12 ? NaN : acc / wsum;
+  }
+
+  /**
+   * Height at level z, falling back to coarser levels when a tile is missing — the whole sample is
+   * then taken bilinearly at the coarser level (as lunarcore.tiles.sample_clip). The previous version
+   * substituted coarse pixels nearest-neighbour into the fine grid, which made 2^s-wide plateaus.
+   */
+  heightAtLevel(z: number, x: number, y: number): number {
+    for (let zz = z; zz >= 0; zz--) {
+      const v = this.sampleLevel(zz, x, y);
+      if (v !== -Infinity) return v;
+    }
+    return NaN;
+  }
+
+  /**
+   * Cubic (Mitchell–Netravali B, C) height at the finest loaded level ≤ `res`'s level, for upsampling
+   * coarse data smoothly (display only). Falls back to bilinear near nodata or missing neighbours.
+   */
+  heightCubic(x: number, y: number, res: number, B: number, C: number): number {
+    for (let zz = this.levelFor(res); zz >= 0; zz--) {
+      const r = this.res(zz);
+      const fx = (x - this.x0) / r - 0.5;
+      const fy = (this.y0 - y) / r - 0.5;
+      const gx = Math.floor(fx);
+      const gy = Math.floor(fy);
+      const tx = fx - gx;
+      const ty = fy - gy;
+      let acc = 0;
+      let missing = false;
+      let nodata = false;
+      for (let dy = -1; dy <= 2 && !missing; dy++) {
+        const wy = mnKernel(dy - ty, B, C);
+        for (let dx = -1; dx <= 2; dx++) {
+          const v = this.pixelAt(zz, gx + dx, gy + dy);
+          if (v === -Infinity) {
+            missing = true;
+            break;
+          }
+          if (v !== v) nodata = true;
+          acc += mnKernel(dx - tx, B, C) * wy * v;
+        }
+      }
+      if (missing) {
+        // the 2x2 core may still be complete at this level: keep the level, lose only smoothness
+        const v = this.sampleLevel(zz, x, y);
+        if (v !== -Infinity) return v;
+        continue;
+      }
+      return nodata ? this.sampleLevel(zz, x, y) : acc;
+    }
+    return NaN;
   }
 
   /** DemSampler: coarsest loaded level with res ≤ requested (falls back to coarser ones). */

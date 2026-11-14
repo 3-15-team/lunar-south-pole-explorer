@@ -39,6 +39,7 @@ P4 — finish
 - [x] T-041 `make verify` green; `make up` → http://localhost:8642 all smoke checks green
 - [~] T-043 configurable panorama anti-aliasing — merged as PR #3, then **reverted** (ADR-114)
 - [x] T-044 panorama relief AA (ADR-115): cubic height interpolation `PANO_TERRAIN_INTERP` + footprint-correct relief prefilter `PANO_RELIEF_AA`
+- [x] T-045 DEM fallback bug (ADR-116): TS coarse-level fallback = Python `sample_clip` (no more nearest-neighbour plateaus outside 5 m DEMs)
 - [ ] T-042 demo video + English subtitles (team; script in `docs/DEMO.md`)
 
 ## NEXT ACTION

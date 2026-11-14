@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { Ephemeris } from '../core/ephemeris';
 import { EARTH_RADIUS_KM, R_MOON_KM, R_MOON_M, SUN_RADIUS_KM, AU_KM, enuAt, latLonToUnit, type Enu } from '../core/geo';
 import type { HorizonProfile } from '../core/horizon';
-import type { DemClient } from '../data/dem';
+import { inflateIfGzip, type DemClient } from '../data/dem';
 import { mulberry32 } from '../core/suitability';
 import { config, INTERP_BC, mnKernel } from '../config';
 
@@ -41,6 +41,10 @@ uniform float uAmbient; uniform float uExposure; uniform vec3 uCam;
 uniform int uInterp;   // 0 bilinear (hardware), 1 cubic Mitchell-Netravali with uBC = (B, C)
 uniform vec2 uBC;
 uniform float uReliefAA; // relief prefilter: scale of the true (anisotropic) pixel footprint on the ground; <= 0 = legacy isotropic estimate
+// statistical micro-relief (pipeline/jobs/micro_relief.py): RG = (ground, rocks) heights in metres, mipmapped
+uniform sampler2D uMicroC; uniform sampler2D uMicroF;
+uniform vec4 uMicroDim;   // coarse tile metres, coarse texels, fine tile metres, fine texels
+uniform float uMicro;     // amplitude; 0 = off (procedural bump fallback)
 const float TAU = 6.28318530718;
 const float PI = 3.14159265359;
 float hf(vec2 en) {
@@ -92,6 +96,20 @@ float regolith(vec2 p, float px) {
   for (int i = 0; i < 9; i++) { float vis = smoothstep(1.5 * px, 4.0 * px, wl); v += amp * vis * (vnoise(p / wl + float(i) * 7.3) - 0.5); wl *= 0.5; amp *= 0.6; }
   return v;
 }
+// one tile, two samplings (second rotated 37° and shifted) → aperiodic; ground adds, rocks max-compose
+const mat2 ROT37 = mat2(0.79864, 0.60181, -0.60181, 0.79864);
+vec2 microTile(sampler2D t, vec2 p, float L, float n, float px) {
+  float lod = log2(max(px * n / L, 1.0));                 // pixel footprint in texels → mip level
+  vec2 a = textureLod(t, p / L, lod).rg;
+  vec2 b = textureLod(t, (ROT37 * p) / L + vec2(0.3719, 0.6113), lod).rg;
+  return vec2((a.x + b.x) * 0.70711, max(a.y, b.y));
+}
+// micro height (m) above the DEM surface, prefiltered to footprint px; .y = rock height (albedo cue)
+vec2 microH(vec2 p, float px) {
+  vec2 c = microTile(uMicroC, p, uMicroDim.x, uMicroDim.y, px);
+  vec2 f = microTile(uMicroF, p, uMicroDim.z, uMicroDim.w, px);
+  return uMicro * vec2(c.x + c.y + f.x + f.y, c.y + f.y);
+}
 void main() {
   vec2 en = vec2(vPos.x, -vPos.z);
   float dist = length(vPos - uCam);
@@ -101,9 +119,24 @@ void main() {
   float px = uReliefAA > 0.0 ? max(0.01, uReliefAA * fp) : max(0.01, dist * 0.0012);
   float d = max(0.5, px);
   vec2 g = vec2(hs(en + vec2(d, 0.0)) - hs(en - vec2(d, 0.0)), hs(en + vec2(0.0, d)) - hs(en - vec2(0.0, d))) / (2.0 * d);
-  float e = max(px, 0.02);
-  float n0 = regolith(en, px);
-  vec2 bump = vec2(regolith(en + vec2(e, 0.0), px) - n0, regolith(en + vec2(0.0, e), px) - n0) / e * 0.35;
+  bool micro = uMicro > 0.0;
+  float n0;
+  vec2 bump;
+  float mh = 0.0, rock = 0.0;
+  if (micro) {
+    // low-frequency albedo variation only (≥ 8 m); all small-scale appearance comes from relief + light
+    n0 = regolith(en, max(px, 2.0)) * 0.6;
+    float em = max(px, uMicroDim.z / uMicroDim.w);
+    vec2 m0 = microH(en, px);
+    mh = m0.x;
+    rock = m0.y;
+    bump = vec2(microH(en + vec2(em, 0.0), px).x - microH(en - vec2(em, 0.0), px).x,
+                microH(en + vec2(0.0, em), px).x - microH(en - vec2(0.0, em), px).x) / (2.0 * em);
+  } else {
+    float e = max(px, 0.02);
+    n0 = regolith(en, px);
+    bump = vec2(regolith(en + vec2(e, 0.0), px) - n0, regolith(en + vec2(0.0, e), px) - n0) / e * 0.35;
+  }
   vec3 nE = normalize(vec3(-(g.x + bump.x), -(g.y + bump.y), 1.0));      // (e, n, u)
   vec3 s = normalize(vec3(uSun.x, -uSun.z, uSun.y));                       // world → ENU
   float lambert = max(dot(nE, s), 0.0);
@@ -122,12 +155,27 @@ void main() {
       if (best > tanStop) break;
       t += max(0.75, t * 0.035);
     }
+    // micro self-shadowing: short march (1 cm … ~5 m) over DEM slope + micro relief, coarser mips with
+    // distance along the ray (antialiased); skipped where micro detail is sub-pixel anyway
+    if (micro && px < 0.5) {
+      float slopeAlong = dot(g, dir);
+      float tm = max(0.01, 0.5 * px);
+      for (int k = 0; k < 28; k++) {
+        if (tm > 5.0) break;
+        float hq = microH(en + dir * tm, max(px, 0.08 * tm)).x;
+        best = max(best, slopeAlong + (hq - mh) / tm - 0.004);
+        if (best > tanStop) break;
+        tm *= 1.28;
+      }
+    }
     float az = atan(s.x, s.y);
     float farEl = texture2D(uFarH, vec2(fract(az / TAU), 0.5)).r;
     fS = edgeFrac((sunEl - max(atan(best), farEl)) / uSunR);
   }
   float slope = degrees(acos(clamp(normalize(vec3(-g, 1.0)).z, -1.0, 1.0)));
   float albedo = 0.12 * (1.0 + 0.45 * n0) * (1.0 + 0.2 * smoothstep(15.0, 35.0, slope));
+  // fresh rock surfaces are somewhat brighter than mature regolith (footprint-averaged cover)
+  if (micro) albedo *= 1.0 + 0.25 * smoothstep(0.0, 0.01, rock);
   vec3 eDir = normalize(vec3(uEarth.x, -uEarth.z, uEarth.y));
   float earthshine = 2.0e-4 * uEarthPhase * max(dot(nE, eDir), 0.0);
   vec2 sh = length(s.xy) > 1e-6 ? normalize(s.xy) : vec2(0.0, 1.0);
@@ -136,6 +184,42 @@ void main() {
   vec3 col = vec3(1.0 - exp(-uExposure * rad)) * vec3(1.0, 0.985, 0.965);
   gl_FragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
 }`;
+
+interface MicroTile {
+  tex: THREE.DataTexture;
+  meters: number;
+  size: number;
+}
+
+/** Load the micro-relief tiles (data/web/micro): RG float16 with a full mip chain, repeat-wrapped. */
+export async function loadMicroRelief(base: string): Promise<{ coarse: MicroTile; fine: MicroTile }> {
+  const r = await fetch(base + 'index.json');
+  if (!r.ok) throw new Error('micro-relief index HTTP ' + r.status);
+  const idx = (await r.json()) as { tiles: Record<string, { file: string; size: number; meters: number; levels: number[] }> };
+  const load = async (name: 'coarse' | 'fine'): Promise<MicroTile> => {
+    const t = idx.tiles[name];
+    const resp = await fetch(base + t.file);
+    if (!resp.ok) throw new Error(`micro-relief ${name} HTTP ${resp.status}`);
+    const all = new Uint16Array(await inflateIfGzip(await resp.arrayBuffer()));
+    const mipmaps: { data: Uint16Array; width: number; height: number }[] = [];
+    let off = 0;
+    for (const n of t.levels) {
+      mipmaps.push({ data: all.subarray(off, off + n * n * 2), width: n, height: n });
+      off += n * n * 2;
+    }
+    if (off !== all.length) throw new Error(`micro-relief ${name}: size mismatch`);
+    const tex = new THREE.DataTexture(mipmaps[0].data, t.size, t.size, THREE.RGFormat, THREE.HalfFloatType);
+    tex.mipmaps = mipmaps as unknown as THREE.DataTexture['mipmaps'];
+    tex.generateMipmaps = false;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.needsUpdate = true;
+    return { tex, meters: t.meters, size: t.size };
+  };
+  const [coarse, fine] = await Promise.all([load('coarse'), load('fine')]);
+  return { coarse, fine };
+}
 
 const discVert = /* glsl */ `
 varying vec2 vUv;
@@ -205,6 +289,8 @@ export class PanoScene {
   pitch = 0.02;
   pos = new THREE.Vector2(0, 0); // (e, n) metres from the site
   ambient = 0.03;
+  /** True when the statistical micro-relief tiles are in use (else the procedural bump fallback). */
+  microLoaded = false;
   /** Height-field interpolation (runtime config, see config.ts). */
   readonly interp = config.panoTerrainInterp;
   state: PanoState = { sunAz: 0, sunEl: 0, earthAz: 0, earthEl: 0, earthPhase: 0, heading: 0 };
@@ -244,6 +330,10 @@ export class PanoScene {
         uCam: { value: new THREE.Vector3() },
         uInterp: { value: this.interp === 'bilinear' ? 0 : 1 },
         uReliefAA: { value: config.panoReliefAA },
+        uMicroC: { value: null },
+        uMicroF: { value: null },
+        uMicroDim: { value: new THREE.Vector4(32, 1024, 4, 1024) },
+        uMicro: { value: 0 },
         uBC: { value: new THREE.Vector2(...(this.interp === 'bilinear' ? [0, 0.5] : INTERP_BC[this.interp])) },
       },
     });
@@ -361,6 +451,17 @@ export class PanoScene {
     ft.wrapS = THREE.RepeatWrapping;
     ft.needsUpdate = true;
     u.uFarH.value = ft;
+    if (config.panoMicro > 0) {
+      onProgress?.('Loading micro-relief…');
+      const m = await loadMicroRelief(this.dem.baseUrl + 'micro/').catch(() => null);
+      if (m) {
+        u.uMicroC.value = m.coarse.tex;
+        u.uMicroF.value = m.fine.tex;
+        u.uMicroDim.value.set(m.coarse.meters, m.coarse.size, m.fine.meters, m.fine.size);
+        u.uMicro.value = config.panoMicro;
+        this.microLoaded = true;
+      }
+    }
     onProgress?.('Building mesh…');
     this.scene.add(this.makeTerrainMesh());
     this.skirt = this.makeSkirt(far);

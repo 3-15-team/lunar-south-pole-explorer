@@ -19,12 +19,13 @@ DEPLOY_TARGET  ?= none
 DATA_BASE_URL  ?=
 PANO_TERRAIN_INTERP ?= catmull
 PANO_RELIEF_AA ?= 1
+PANO_MICRO ?= 1
 COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-directory $(ROOT)
-export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA
+export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA PANO_MICRO
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
-        data-sites data-psr data-horizon data-heatmaps data-pull data-status validate dev web-dev \
+        data-sites data-psr data-horizon data-heatmaps data-micro data-pull data-status validate dev web-dev \
         compute-dev web-build web-preview up up-ai down logs ps lint typecheck test test-py test-web \
         build smoke verify dist serve-dist deploy clean clean-data
 
@@ -52,12 +53,12 @@ data: data-fetch data-build ## Download sources (tier <= DATA_TIER) and build ev
 
 data-min: ## Smallest working set: kernels + 80 m DEM -> ephemeris, tiles, sites, PSR
 	$(PY) pipeline/jobs/download.py --tier 0
-	$(MAKE) data-ephem data-tiles data-sites data-psr
+	$(MAKE) data-ephem data-tiles data-sites data-psr data-micro
 
 data-fetch: ## Resumable, verified downloads into data/raw (records data/manifest.json)
 	$(PY) pipeline/jobs/download.py --tier $(DATA_TIER)
 
-data-build: data-ephem data-tiles data-sites data-psr data-horizon data-heatmaps ## Build all products (idempotent)
+data-build: data-ephem data-tiles data-sites data-psr data-horizon data-heatmaps data-micro ## Build all products (idempotent)
 
 data-ephem: ## Sun/Earth tables in MOON_ME 2026-2036 -> data/web/ephem
 	$(PY) -m pipeline.jobs.ephemeris
@@ -73,6 +74,9 @@ data-psr: ## PSR polygons -> data/web/psr.geojson
 
 data-horizon: ## Region horizon maps (server-side) -> data/work
 	$(PY) -m pipeline.jobs.horizon_maps
+
+data-micro: ## Statistical micro-relief tiles for the panorama (seconds, deterministic) -> data/web/micro
+	$(PY) -m pipeline.jobs.micro_relief
 
 data-heatmaps: ## Pre-baked default suitability heatmaps -> data/web/heatmaps
 	$(PY) -m pipeline.jobs.prebake

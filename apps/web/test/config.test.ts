@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { config, DEFAULT_CONFIG, INTERP_BC, loadConfig, mnKernel, parseInterp, parseReliefAA } from '../src/config';
+import { config, DEFAULT_CONFIG, INTERP_BC, loadConfig, mnKernel, parseInterp, parseMicro, parseReliefAA } from '../src/config';
 
 const json = (body: unknown) =>
   ({ ok: true, headers: new Headers({ 'content-type': 'application/json' }), json: async () => body }) as unknown as Response;
@@ -24,16 +24,22 @@ describe('runtime config', () => {
     expect(parseReliefAA('x')).toBeUndefined();
   });
 
-  it('defaults: Catmull-Rom heights, one-pixel relief footprint', () => {
-    expect(DEFAULT_CONFIG).toEqual({ panoTerrainInterp: 'catmull', panoReliefAA: 1 });
+  it('parseMicro clamps to [0, 3]', () => {
+    expect(parseMicro('0.6')).toBe(0.6);
+    expect(parseMicro(9)).toBe(3);
+    expect(parseMicro('off')).toBeUndefined();
+  });
+
+  it('defaults: Catmull-Rom heights, one-pixel relief footprint, micro-relief on', () => {
+    expect(DEFAULT_CONFIG).toEqual({ panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1 });
   });
 
   it('config.json overrides the default, URL overrides config.json', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ panoTerrainInterp: 'mitchell', panoReliefAA: 2 })));
     let c = await loadConfig('/config.json', '');
     expect([c.panoTerrainInterp, c.panoReliefAA]).toEqual(['mitchell', 2]);
-    c = await loadConfig('/config.json', '?interp=bilinear&raa=0');
-    expect([c.panoTerrainInterp, c.panoReliefAA]).toEqual(['bilinear', 0]);
+    c = await loadConfig('/config.json', '?interp=bilinear&raa=0&micro=0');
+    expect([c.panoTerrainInterp, c.panoReliefAA, c.panoMicro]).toEqual(['bilinear', 0, 0]);
   });
 
   it('missing config keeps the default', async () => {

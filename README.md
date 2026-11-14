@@ -46,6 +46,9 @@ overrides it for one tab):
 - `PANO_RELIEF_AA` = relief prefilter width as a multiple of the true pixel footprint on the ground
   (default `1`; `2` = smoother relief; `0` = the original isotropic estimate). Filters relief detail only;
   the image is not blurred.
+- `PANO_MICRO` = amplitude of the statistical sub-DEM micro-relief (default `1`; `0.6` = calmer; `0` = off →
+  the old procedural texture). Built by `make data-micro` (seconds; part of `make data` / `data-min`)
+  into `data/web/micro/`; without it the panorama silently uses the procedural texture.
 
 Example: `make up PANO_TERRAIN_INTERP=bspline PANO_RELIEF_AA=1.5`, or
 `http://localhost:8642/?interp=bilinear&raa=0#m=pano` for the original look.

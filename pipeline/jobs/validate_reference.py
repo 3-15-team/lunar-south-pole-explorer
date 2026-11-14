@@ -62,6 +62,46 @@ def ours(store, err, eph, x, y, hobs, times):
     return float(s.f_sun.mean()), float((s.f_earth > 0).mean()), hz
 
 
+def site_points(store, eph, times) -> None:
+    """Our 'dem-summit' catalog points vs published site points (pipeline/config/site_refs.json)."""
+    from lunarcore.geo import great_circle_m
+
+    from ._common import CONFIG
+
+    refs = json.loads((CONFIG / "site_refs.json").read_text())["refs"]
+    sites = {s["id"]: s for s in json.loads((WEB / "sites.json").read_text())["sites"]}
+    md = [f"_Generated {now_iso()} by `{JOB}` from `pipeline/config/site_refs.json`._", "",
+          "Catalog points of the PGDA 5 m sites are the highest terrain inside the central 60 % of each 5 m DEM "
+          "(ADR-110). Published points are of different kinds (region centres, illumination maxima, landing points), "
+          "so distances of a few hundred metres are expected; where a source prints an average illumination we "
+          f"recompute it at the same point with our horizon and ephemeris ({iso_utc(times[0])[:4]}–"
+          f"{iso_utc(times[-1])[:4]}; the sources average over an 18.6-year cycle).", "",
+          "| site | published point | lat, lon | distance to our point (m) | ref inside 5 m DEM | published illum. | ours at that point |",
+          "|---|---|---|---|---|---|---|"]
+    for r in refs:
+        s = sites.get(r["site"])
+        if not s:
+            continue
+        xr, yr = (float(v) for v in ll_to_xy(r["lat"], r["lon"]))
+        xs_, ys_ = (float(v) for v in ll_to_xy(s["lat"], s["lon"]))
+        dist = float(great_circle_m(xr, yr, xs_, ys_))
+        bb = s.get("demBbox")
+        inside = bb is not None and bb[0] <= xr <= bb[2] and bb[1] <= yr <= bb[3]
+        pub, mine = "–", "–"
+        if r.get("pubIllum") is not None:
+            fs, _, _ = ours(store, None, eph, xr, yr, r.get("pubHobs", 0.0), times)
+            pub = f"{100 * r['pubIllum']:.1f} % (h = {r.get('pubHobs', 0):g} m)"
+            mine = f"{100 * fs:.1f} %"
+        md.append(f"| {s['name']} | [{r['label']}]({r['source']}) | {r['lat']:.4f}, {r['lon']:.4f} | {dist:,.0f} | "
+                  f"{'yes' if inside else 'no'} | {pub} | {mine} |")
+    notes = [f"- {r['label']}: {r['note']}." for r in refs if r.get("note")]
+    if notes:
+        md += ["", "Notes on large differences:", ""] + notes
+    md += ["", "Our points: " + "; ".join(f"{s['name']} {s['lat']:.4f}, {s['lon']:.4f} ({s['heightM']} m)"
+                                          for s in sites.values() if s.get("coordQuality") == "dem-summit") + "."]
+    update_section("sitepoints", "Catalog site points vs published points", "\n".join(md))
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--points", type=int, default=150)
@@ -148,6 +188,7 @@ def main(argv=None) -> None:
            "march (1 % steps, mean pyramid) vs the reference horizon computation; (4) unknown reference observer "
            "height (we use 0 m here; the app defaults to 2 m)."]
     update_section("reference", "Long-term Sun/Earth visibility vs Mazarico et al. reference maps", "\n".join(md))
+    site_points(store, eph, times)
     log("validate_reference", f"sites {len(rows)}, random {st_sun['n']}: Sun bias {st_sun['bias']:+.3f} rms "
                               f"{st_sun['rms']:.3f} r {st_sun['r']:.3f}; Earth bias {st_earth['bias']:+.3f} rms "
                               f"{st_earth['rms']:.3f} r {st_earth['r']:.3f}; {dt_run:.0f} s")

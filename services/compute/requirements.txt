@@ -1,8 +1,9 @@
 # Compute service (FastAPI, CPU-only). lunarcore is installed from libs/lunarcore.
-numpy>=1.26,<3
-numba>=0.60
-scipy>=1.11
-pillow>=10.0
-fastapi>=0.110
-uvicorn>=0.29
-pydantic>=2.6
+# Pinned to the versions validated on 2026-11-14.
+numpy==2.5.4
+numba==0.68.1
+scipy==1.18.1
+pillow==13.0.0
+fastapi==0.162.7
+uvicorn==0.54.0
+pydantic==2.14.3

@@ -10,7 +10,7 @@ Numbers below were produced by the app's own core (`apps/web/scripts/demo-scan.t
 | de Gerlache rim (site11) | 78% | start 2027-03-25: 97% → 26%, night 6 h → 246 h |
 | Malapert massif (site23) | 61% | start 2027-02-19: 80% → 9%, night 61 h → 301 h |
 
-Demo link (local stack): `http://localhost:8088/#s=site01&t=2027-04-28T00:00Z&i=2027-04-28T00:00Z~2027-05-12T00:00Z&c=site01@2027-04-28T00:00Z~2027-05-12T00:00Z;site07@2027-04-28T00:00Z~2027-05-12T00:00Z`
+Demo link (local stack): `http://localhost:8642/#s=site01&t=2027-04-28T00:00Z&i=2027-04-28T00:00Z~2027-05-12T00:00Z&c=site01@2027-04-28T00:00Z~2027-05-12T00:00Z;site07@2027-04-28T00:00Z~2027-05-12T00:00Z`
 
 ## Script (≈ 3 min)
 

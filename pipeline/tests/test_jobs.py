@@ -86,3 +86,25 @@ def test_tables_match_spice_at_nodes():
     for i, k in enumerate((0, 1, 4321, 17519)):
         s = job.positions(sp, et[i:i + 1], "SUN")[0]
         assert np.allclose(rec[k, :3], s, rtol=1e-6)
+
+
+def test_horizon_map_builder_resumable(tmp_path):
+    from lunarcore import horizon as H
+    from lunarcore import synthetic
+    from pipeline.jobs import horizon_maps as hm
+
+    a = SimpleNamespace(res=20000.0, extent=40000.0, naz=8, alpha=0.02, hobs=2.0, block=2)
+    xs, ys = hm.grid(a.res, a.extent)
+    pyr = T.pyramid_from_function(synthetic.dem_function({"type": "flat", "h": 100.0}), 0.0, 0.0, 3, alpha=0.02,
+                                  dmax=300e3)
+    blocks = list(range(0, xs.size, a.block))
+    prog = {"params": {}, "done": [blocks[0]]}  # pretend the first block was done by an interrupted run
+    hp, tp, pp = tmp_path / "h.partial.npy", tmp_path / "t.partial.npy", tmp_path / "p.json"
+    np.lib.format.open_memmap(hp, mode="w+", dtype=np.uint8, shape=(xs.size, xs.size, a.naz))[:] = 7
+    np.lib.format.open_memmap(tp, mode="w+", dtype=np.float32, shape=(xs.size, xs.size))[:] = np.nan
+    assert hm.build_map(a, pyr, 3, xs, ys, blocks, prog, pp, hp, tp)
+    out = np.load(hp)
+    assert np.all(out[:2] == 7)  # resumed: finished block untouched
+    dip = H.encode_map_elev(-math.degrees(math.sqrt(2 * 2.0 / 1737400.0)))
+    inside = np.hypot(*np.meshgrid(xs, ys))[2:] <= a.extent
+    assert np.all(out[2:][inside] == dip) and json.loads(pp.read_text())["done"] == blocks

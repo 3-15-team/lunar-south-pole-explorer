@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # make smoke [BASE_URL=...] — key endpoints of a running stack (static data required, API optional)
-BASE=${1:-http://localhost:8088}
+BASE=${1:-http://localhost:8642}
 fail=0
 check() { # url, required(1/0)
   code=$(curl -s -o /dev/null -m 10 -w "%{http_code}" "$BASE$1")

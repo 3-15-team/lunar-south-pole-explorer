@@ -96,8 +96,8 @@ multiples of the pixel size from the pole):
   records of 6 floats: `[sunX, sunY, sunZ, earthX, earthY, earthZ]` (km, MOON_ME).
   Record `k` of year Y is at `Date.UTC(Y,0,1) + k·1800 s`; the file has exactly
   `(days in Y)·48` records.
-- Consumers interpolate linearly between records (direction error < 0.1″, verified in
-  `docs/VALIDATION.md`).
+- Consumers interpolate linearly between records (direction error: Sun ≤ 0.017″, Earth ≤ 0.121″ —
+  the Earth term comes from libration acceleration; verified in `docs/VALIDATION.md`).
 - Index `data/web/ephem/index.json`:
   ```json
   {"version": 1, "frame": "MOON_ME", "frameRealization": "MOON_ME_DE440_ME421",
@@ -117,12 +117,14 @@ Curated in `pipeline/config/sites.json`, enriched by `pipeline/jobs/sites.py`
 {"version": 1, "sites": [
   {"id": "site04", "name": "Shackleton rim", "lat": -89.78, "lon": -156.2,
    "kind": "pgda-5m|artemis|clps|mission|reference",
-   "coordQuality": "dem-centre|published|approx",
+   "coordQuality": "dem-summit|dem-centre|published|approx",
    "inCoverage": true, "hiRes": {"z": 9, "bbox": [xmin, ymin, xmax, ymax]},
    "note": "short plain-language note", "source": "URL"}]}
 ```
 Sites outside the LOLA polar coverage keep `"inCoverage": false` and are listed as
-"outside coverage" (no horizon can be computed).
+"outside coverage" (no horizon can be computed). PGDA 5 m sites use `dem-summit` = highest terrain
+inside the central 60% of the site DEM (ADR in DECISIONS.md); extra fields: `x`, `y`, `heightM`,
+`demCentre`, `demBbox`, `dem`.
 
 ## 5. Permanently shadowed regions — `data/web/psr.geojson`
 
@@ -145,7 +147,7 @@ Static fallback for `services/compute` (`POST /api/v1/heatmap` returns the same 
 - `horizon_{res}m.npy` + `.json`: region horizon map, `uint8[ny][nx][naz]` —
   elevation `e = −5° + 0.1°·v` (`v = 255` means ≥ 20.4°), naz = 64 by default,
   azimuth `k·360/naz` (clockwise from local North), observer height 2 m.
-- `features_{res}m.npz`: slope, relief, roughness rasters for the same grid.
+- `features_{res}m.npz`: slopeMax, slopeMean, relief, height and a PSR mask for the same grid.
 
 ## 8. Manifest — `data/manifest.json` (committed)
 

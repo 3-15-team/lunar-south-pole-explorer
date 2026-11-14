@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 import time
+from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
@@ -22,7 +23,7 @@ from .tiles import tile_of
 
 MAX_SAMPLES = 200_000
 MAX_HEATMAP_SAMPLES = 20_000
-# cividis (Nunez et al. 2018) sampled at 9 stops; linear interpolation in between
+# approximation of cividis (Nunez et al. 2018, colour-vision-deficiency friendly): 9 stops, linear in between
 _CIVIDIS = np.array([
     (0, 34, 78), (17, 54, 108), (59, 73, 108), (89, 92, 109), (117, 113, 112), (147, 134, 113),
     (180, 157, 108), (216, 182, 94), (254, 232, 56)], dtype=np.float64)
@@ -149,19 +150,30 @@ def _features(reg: dict, rs, cs, footprint: float) -> tuple[dict, dict]:
     return feat, info
 
 
+_LAYERS: OrderedDict = OrderedDict()  # interval layers shared by presets/weights/footprints (LRU, 4 entries)
+
+
 def interval_layers(ds: DataStore, p: dict, rs, cs) -> tuple[dict, dict]:
     eph = ds.require_eph()
     reg = ds.require_region()
     span_h = (parse_utc(p["t1"]) - parse_utc(p["t0"])) / 3600.0
     step_h = p.get("stepHours") or (2.0 if span_h > 120 else 0.5)
     times, dt, t0, t1 = time_grid(p["t0"], p["t1"], step_h * 3600.0, eph, MAX_HEATMAP_SAMPLES)
+    lkey = (ds.version, t0, t1, dt, p["dteThreshold"], rs.start, rs.stop, cs.start, cs.stop)
+    if lkey in _LAYERS:
+        _LAYERS.move_to_end(lkey)
+        return _LAYERS[lkey]
     S, E = eph.vectors(times)
     hmap = np.asarray(reg["hmap"][rs, cs])
     hterr = np.asarray(reg["hterr"][rs, cs], dtype=np.float64)
     lay = maps.run_interval_maps(hmap, hterr, reg["xs"][cs], reg["ys"][rs], S, E, reg["meta"]["obsHeight"],
                                  p["dteThreshold"], DARK_F)
     lay["darkH"] = lay.pop("darkSamples") * dt / 3600.0
-    return lay, {"t0": iso_utc(t0), "t1": iso_utc(t1), "samples": int(times.size), "stepHours": dt / 3600.0}
+    out = (lay, {"t0": iso_utc(t0), "t1": iso_utc(t1), "samples": int(times.size), "stepHours": dt / 3600.0})
+    _LAYERS[lkey] = out
+    while len(_LAYERS) > 4:
+        _LAYERS.popitem(last=False)
+    return out
 
 
 def heatmap(ds: DataStore, p: dict, out_dir: Path) -> dict:

@@ -35,11 +35,15 @@
 | Numba | BSD-2-Clause | https://numba.pydata.org |
 | rasterio (+ GDAL) | BSD-3-Clause (rasterio), MIT/X (GDAL) | https://rasterio.readthedocs.io |
 | pyshp | MIT | https://github.com/GeospatialPython/pyshp |
+| SciPy, llvmlite | BSD-3 / BSD-2 | https://scipy.org |
+| Shapely (+ GEOS) | BSD-3 (GEOS: LGPL-2.1) | https://shapely.readthedocs.io |
 | Pillow | MIT-CMU (HPND) | https://python-pillow.org |
 | FastAPI, Starlette, Pydantic, Uvicorn | MIT / BSD-3-Clause | https://fastapi.tiangolo.com |
 | pytest, ruff, httpx | MIT | — |
 | nginx (container image) | BSD-2-Clause | https://nginx.org |
+| python:3.12-slim, node:22-alpine, nginx:1.27-alpine images | PSF / MIT / BSD-2 (+ Debian/Alpine packages) | Docker Hub |
 | Inter / system fonts | system fonts only (no web fonts loaded) | — |
+| Cividis colour map (approximation) | Nuñez, Anderton & Renslow 2018, PLoS ONE 13(7) | https://doi.org/10.1371/journal.pone.0199239 |
 
 ## Synthetic content
 

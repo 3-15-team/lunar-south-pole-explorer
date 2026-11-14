@@ -10,6 +10,9 @@ requires-python = ">=3.11"
 license = {text = "MIT"}
 dependencies = ["numpy>=1.26", "numba>=0.60"]
 
+[project.optional-dependencies]
+analysis = ["scipy>=1.11", "pillow>=10"]  # suitability box filters, heatmap PNGs
+
 [tool.setuptools.packages.find]
 include = ["lunarcore*"]
 

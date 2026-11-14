@@ -10,3 +10,6 @@
 - 2026-11-14 11:50 bug fixed: panorama mesh winding (ground culled); PGDA site points moved from DEM centre to DEM summit (agent).
 - 2026-11-14 12:05 demo scan: Connecting ridge 2027-04-28 +10 d slip → sunlight 89% → 24%, night 5 h → 108 h (docs/DEMO.md).
 - 2026-11-14 12:10 infra: compose (port 8088), web image 55.7 MB builds; README/DEMO/REFERENCES/SUBMISSION written.
+- 2026-11-14 13:20 Python agent done: tiles z0–z9 (993 MB), horizon_240m (17 min, 10 cores), 4 pre-baked heatmaps, compute + texgen images; Horizons max err Sun 0.012″ / Earth 0.115″; vs Mazarico r = 0.977 / 0.972.
+- 2026-11-14 13:30 compose port moved to 8642 (8080/8088/8090/5001 used by another local stack — untouched); `make up` + smoke 9/9 green.
+- 2026-11-14 13:35 `make verify` green end-to-end.

@@ -18,7 +18,7 @@ fi
 run "tsc" bash -c "cd apps/web && npx tsc --noEmit"
 run "vitest" bash -c "cd apps/web && npx vitest run"
 run "vite build" bash -c "cd apps/web && npx vite build --logLevel warn"
-for base in http://localhost:8088 http://localhost:5173; do
+for base in http://localhost:8642 http://localhost:5173; do
   if curl -s -o /dev/null -m 3 "$base/"; then run "smoke $base" bash infra/scripts/smoke.sh "$base"; break; fi
 done
 printf "\n\033[1mverify summary\033[0m\n"

@@ -34,7 +34,7 @@ print(f"    manifest: {len(m.get('files', {}))} source files, {len(m.get('produc
 PY
 fi
 echo "Ports"
-for p in 5173 8000 8088; do
+for p in 5173 8000 8642; do
   if lsof -iTCP:$p -sTCP:LISTEN >/dev/null 2>&1; then warn "port $p in use"; else ok "port $p free"; fi
 done
 exit 0

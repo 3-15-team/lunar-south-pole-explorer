@@ -32,7 +32,7 @@ make dev          # web on http://localhost:5173 (+ compute API on :8000)
 Primary demo (works offline once data is built):
 
 ```bash
-make up           # docker compose: nginx (SPA + /data) + compute → http://localhost:8088
+make up           # docker compose: nginx (SPA + /data) + compute → http://localhost:8642
 make smoke        # check key endpoints
 make down
 ```

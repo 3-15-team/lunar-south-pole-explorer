@@ -12,7 +12,7 @@ No deploy target configured (DEPLOY_TARGET=none). Options:
   make dist && make serve-dist           # local static bundle (what any host would serve)
   make deploy DEPLOY_TARGET=static STATIC_DEST=...   # rsync the bundle anywhere
   make deploy DEPLOY_TARGET=gcp|azure    # stubs in infra/deploy/, fill variables first
-The primary demo is local: make up  →  http://localhost:8088
+The primary demo is local: make up  →  http://localhost:8642
 TXT
   exit 0
 fi

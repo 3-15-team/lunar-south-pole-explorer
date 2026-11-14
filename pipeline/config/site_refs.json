@@ -1,0 +1,100 @@
+{
+ "_comment": "Published reference points for the PGDA 5 m sites (cross-check of our 'dem-summit' catalog points; pipeline/jobs/validate_reference.py). Different kinds of points: De Rosa et al. 2012 = centres of regions of interest; Mazarico/Glaeser/Boazman = illumination maxima or site points; Pena-Asensio = chosen landing points. Barker et al. 2021 (Sec. 2) states Site 1/4/7/11 = CR1/SR1/SV1/GR1 of De Rosa et al.; Site20/Site23 matches are by name only. Longitudes east-positive.",
+ "refs": [
+  {
+   "site": "site01",
+   "label": "Mazarico et al. 2011 Site 1 point (as reproduced by Glaeser 2014, Table 7)",
+   "lat": -89.45,
+   "lon": -137.31,
+   "source": "https://depositonce.tu-berlin.de/bitstream/11303/4603/2/glaeser_philipp.pdf",
+   "pubIllum": 0.8901,
+   "pubHobs": 0.0,
+   "pubNote": "89.01 % average illumination at the surface, 240 m/px, full precession cycle",
+   "note": "printed to 0.01 deg (about +-150 m in latitude) on a ridge crest a few hundred metres wide, so the rounded point can fall on the flank; the 4-decimal point of Glaeser 2014 (23 m from our summit) agrees within ~2 percentage points"
+  },
+  {
+   "site": "site01",
+   "label": "De Rosa et al. 2012 CR1 (region centre, Table 2)",
+   "lat": -89.4679,
+   "lon": -137.411,
+   "source": "https://arxiv.org/pdf/1208.5587"
+  },
+  {
+   "site": "site01",
+   "label": "Glaeser 2014 CR1 best spot at 2 m (Table 7)",
+   "lat": -89.4395,
+   "lon": -137.1934,
+   "source": "https://depositonce.tu-berlin.de/bitstream/11303/4603/2/glaeser_philipp.pdf",
+   "pubIllum": 0.8812,
+   "pubHobs": 2.0,
+   "pubNote": "88.12 % at 2 m height, 20 m/px, full precession cycle"
+  },
+  {
+   "site": "site04",
+   "label": "Boazman et al. 2022 site 004 (= Mazarico Site 4)",
+   "lat": -89.78,
+   "lon": -155.73,
+   "source": "https://iopscience.iop.org/article/10.3847/PSJ/aca590/pdf"
+  },
+  {
+   "site": "site04",
+   "label": "De Rosa et al. 2012 SR1 (region centre, Table 2)",
+   "lat": -89.7755,
+   "lon": -156.448,
+   "source": "https://arxiv.org/pdf/1208.5587"
+  },
+  {
+   "site": "site07",
+   "label": "De Rosa et al. 2012 SV1 (region centre, Table 2)",
+   "lat": -88.8247,
+   "lon": 124.1359,
+   "source": "https://arxiv.org/pdf/1208.5587"
+  },
+  {
+   "site": "site11",
+   "label": "De Rosa et al. 2012 GR1 (region centre, Table 2)",
+   "lat": -88.6952,
+   "lon": -68.2846,
+   "source": "https://arxiv.org/pdf/1208.5587"
+  },
+  {
+   "site": "site11",
+   "label": "Kumari et al. 2022 Site 011 station L1 (landing point, Table 3)",
+   "lat": -88.65,
+   "lon": -67.12,
+   "source": "https://iopscience.iop.org/article/10.3847/PSJ/ac88c2"
+  },
+  {
+   "site": "site20",
+   "label": "De Rosa et al. 2012 LP1 (name match only)",
+   "lat": -85.4596,
+   "lon": 31.78053,
+   "source": "https://arxiv.org/pdf/1208.5587",
+   "note": "matched by name only (no source assigns it to the PGDA site); region centre, not a summit"
+  },
+  {
+   "site": "site23",
+   "label": "De Rosa et al. 2012 MP1 (name match only)",
+   "lat": -85.9756,
+   "lon": -2.11241,
+   "source": "https://arxiv.org/pdf/1208.5587",
+   "note": "matched by name only (no source assigns it to the PGDA site); region centre, not a summit"
+  },
+  {
+   "site": "site23",
+   "label": "De Rosa et al. 2012 MP2 (name match only)",
+   "lat": -86.0265,
+   "lon": 2.757964,
+   "source": "https://arxiv.org/pdf/1208.5587",
+   "note": "matched by name only (no source assigns it to the PGDA site); region centre, not a summit"
+  },
+  {
+   "site": "dm2",
+   "label": "Pena-Asensio et al. 2024 #1-ranked landing point on DM2 (Table 3)",
+   "lat": -84.20156,
+   "lon": 60.69989,
+   "source": "https://arxiv.org/pdf/2406.19863",
+   "note": "a ranked landing point inside the DM2 DEM, not a site centre or summit"
+  }
+ ]
+}

@@ -1,22 +1,22 @@
 # STATE — single source of truth (≤ 200 lines)
 
-- Updated: 2026-11-14 12:10 UTC (16:10 Yerevan) · session #1 · account 1
+- Updated: 2026-11-14 13:40 UTC (17:40 Yerevan) · session #1 · account 1
 - Pitch: **Sun 2026-11-15 18:00 Yerevan (14:00 UTC)** · freeze **Sun 14:30 Yerevan (10:30 UTC)**
-- Hours until freeze at update: **22.3 h**. Phase: P1 + most of P2/P3 done in parallel; P4 docs started.
+- Hours until freeze at update: **20.8 h**. Phase: P1–P3 done; P4 (video, submission page, polish) remains.
 
 ## Phase & tasks
 
 P0 — bootstrap
 - [x] T-001 docs skeleton + ADRs + kickoff copy (`docs/KICKOFF_PROMPT.md`)
-- [~] T-002 data downloads — tier 0 + 80 m ERR + 5 m sites done; **40 m DEM still downloading** (PGDA ≈ 0.3 MB/s) → z6 tiles missing until it lands (`make data-tiles` afterwards)
+- [x] T-002 data downloads — all tier 0/1 sources incl. 40 m DEM, 80 m error map, 10 PGDA 5 m sites (+ error maps)
 - [x] T-003 Makefile + infra (compose, Dockerfiles, nginx, deploy hooks, doctor/verify/smoke/dist scripts)
 - [x] T-004 Trek WMTS checked (ADR-018): hillshade layer with CORS exists; not used (baked shadows)
 
 P1 — walking skeleton
 - [x] T-010 `libs/lunarcore` geo/tiles/ephemeris + golden vectors (Python agent)
 - [x] T-011 ephemeris tables 2026–2036 (`data/web/ephem`) — Horizons validation: see `docs/VALIDATION.md`
-- [x] T-012 DEM tiles z0–z5, z7–z9 (z6 pending 40 m download)
-- [x] T-013 PSR GeoJSON + site catalog (PGDA site points being switched to DEM summit — Python agent)
+- [x] T-012 DEM tiles z0–z9: 8259 tiles, 993 MB (+ error tiles z0–z5, 82 MB); sources align with LPS-2560, no resampling
+- [x] T-013 PSR GeoJSON (1531 polygons) + catalog (29 sites, 22 in coverage; PGDA points = DEM summit, Site04 56 m from Mazarico Site 4)
 - [x] T-014 web skeleton: Vite 6 / Preact 10 / TS 5.9, signals store + URL hash codec
 - [x] T-015 map: OL `LUNAR:SPS` + WebGL2 terrain layer (live Sun shading + ray-marched soft shadows)
 
@@ -30,26 +30,26 @@ P2 — challenge core
 
 P3 — wow layer
 - [x] T-030 slope + suitability layer + footprint/slope/preset controls + candidates + rank stability (client MC)
-- [~] T-031 compute service + pre-baked heatmaps — Python agent working; client overlay wired (server → static fallback)
+- [x] T-031 compute service (site-metrics, heatmap, robustness, cache) + 4 pre-baked heatmaps; client overlay (server → static fallback) verified
 - [x] T-032 panorama (Three.js; soft shadows, far horizon ring, Sun glare, Earth phase, stars, WASD)
 - [x] T-033 warm-up fly-in (real Sun direction, skippable, reduced-motion aware)
 
 P4 — finish
-- [~] T-040 docs: README, DEMO (real numbers), REFERENCES, SUBMISSION done; VALIDATION by Python agent
-- [ ] T-041 `make verify` green + `make up` end-to-end (web image builds: 55.7 MB; compute image pending)
+- [x] T-040 docs: README, DEMO (real numbers), REFERENCES, SUBMISSION, VALIDATION, API
+- [x] T-041 `make verify` green; `make up` → http://localhost:8642 all smoke checks green
 - [ ] T-042 demo video + English subtitles (team; script in `docs/DEMO.md`)
 
 ## NEXT ACTION
 
-1. Wait for the Python agent report → review `services/compute`, `docs/VALIDATION.md`, re-run `make verify`.
-2. When `LDEM_80S_40MPP_ADJ.TIF` finishes: `make data-tiles` (adds z6), re-check map at 40 m.
-3. `make up` end-to-end + `make smoke`; then UX pass on the demo link in `docs/DEMO.md`.
+1. Paste the official challenge text into `docs/CHALLENGE.md`; re-check scope/catalogue against it.
+2. Record the demo video from `docs/DEMO.md` (demo link there) + English subtitles; fill `docs/SUBMISSION.md` links.
+3. Optional polish (cut list order applies): panorama look, VR (cut), texture L2 (out).
 
 ## Environment facts
 
 - Project root: `sandbox/dima/` (repo `3-15-team/explorer`, branch `dima`, local commits only — ADR-001).
 - macOS arm64 (M1 Max), Node 26.13, Python 3.12.12 (`.venv`), Docker 29.8 (OrbStack), GNU make 3.81.
-- Ports: web dev **5173** · compute **8000** · compose **8088** (8080 is taken by another OrbStack container).
+- Ports: web dev **5173** · compute **8000** · compose **8642** (8080, 8088, 8090, 5001 are taken by another local stack — do not touch it).
 - Data: `data/raw` (downloads, manifest-tracked), `data/work` (server-only), `data/web` (served at `/data`).
 - Disk free ≈ 13 GB after downloads/tiles (watch it: 40 m DEM + z6 tiles ≈ +1 GB).
 - Headless visual check: `node <scratchpad>/pw/shot.mjs` (playwright-core driving installed Chrome; real GPU via ANGLE Metal).
@@ -67,10 +67,11 @@ P4 — finish
 
 ## Known issues
 
-- PGDA downloads are slow (≈ 0.3 MB/s); 40 m DEM pending.
-- Compute API absent in dev → browser logs one 500 for `/api/v1/info` (expected; UI shows "offline").
+- Artemis III region points are approximate (LROC mosaic centres); Slater Plain omitted (no citable coordinate); Chang'e-7 approximate.
+- Connecting-ridge summit (5 m crest) vs Mazarico 60 m pixel: 0.82 vs 0.44 (scale mismatch, see VALIDATION).
 - Panorama far-field occlusion uses the observer's far horizon for all fragments (≤ 2.5 km walk radius) — documented approximation.
+- Restart the compute service after rebuilding data; `data/work/mosaic` (1.7 GB) is a deletable cache; ≈ 9.8 GB disk free.
 
 ## Last `make verify`
 
-- not run end-to-end yet; vitest 22/22 green, tsc clean, vite build OK (12:00 UTC).
+- 2026-11-14 13:35 UTC: **green** — ruff ✓, pytest 61 passed, tsc ✓, vitest 22 passed, vite build ✓, smoke http://localhost:8642 ✓ (9/9).

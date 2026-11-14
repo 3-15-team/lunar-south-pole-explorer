@@ -109,6 +109,49 @@ def psr_mask(xs: np.ndarray, ys: np.ndarray, res: float) -> np.ndarray:
     return np.asarray(img, dtype=np.uint8)
 
 
+def build_map(a, pyr, zfine, xs, ys, blocks, prog, prog_p, hp_part, tp_part) -> bool:
+    """Compute missing row blocks into the *.partial.npy memmaps; returns True when all blocks are done."""
+    n = xs.size
+    mode = "r+" if hp_part.exists() and prog["done"] else "w+"
+    hm = np.lib.format.open_memmap(hp_part, mode=mode, dtype=np.uint8, shape=(n, n, a.naz))
+    ht = np.lib.format.open_memmap(tp_part, mode=mode, dtype=np.float32, shape=(n, n))
+    if mode == "w+":
+        hm[:] = 255
+        ht[:] = np.nan
+    done = set(prog["done"])
+    t_start = time.time()
+    for b0 in blocks:
+        if b0 in done:
+            continue
+        b1 = min(n, b0 + a.block)
+        if np.abs(ys[b0:b1]).min() > a.extent:  # smallest rho in a row is |y|
+            done.add(b0)
+            continue
+        ymin = np.abs(ys[b0:b1]).min()
+        half = math.sqrt(max(0.0, a.extent ** 2 - ymin ** 2))
+        cols = np.flatnonzero(np.abs(xs) <= half + a.res)  # columns that intersect rho <= extent
+        out = np.full((b1 - b0, cols.size, a.naz), 255, np.uint8)
+        hh = np.full((b1 - b0, cols.size), np.nan)
+        H.region_rows(pyr.index, pyr.stack, zfine, xs[cols], ys[b0:b1], a.hobs, a.naz, a.alpha, 300e3, R_MOON,
+                      pyr.hmax, pyr.hmin, out, hh)
+        rr = np.hypot(xs[cols][None, :], ys[b0:b1][:, None])
+        out[rr > a.extent] = 255
+        hh[rr > a.extent] = np.nan
+        hm[b0:b1, cols[0]:cols[-1] + 1] = out
+        ht[b0:b1, cols[0]:cols[-1] + 1] = hh
+        hm.flush()
+        ht.flush()
+        done.add(b0)
+        prog["done"] = sorted(done)
+        write_json(prog_p, prog)
+        log("horizon_maps", f"rows {b0}-{b1} done ({len(done)}/{len(blocks)} blocks, "
+                            f"{(time.time() - t_start) / 60:.1f} min elapsed)")
+    prog["runtimeS"] = prog.get("runtimeS", 0.0) + (time.time() - t_start)
+    write_json(prog_p, prog)
+    del hm, ht
+    return len(done) == len(blocks)
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--res", type=float, default=240.0)
@@ -127,6 +170,7 @@ def main(argv=None) -> None:
     n = xs.size
     WORK.mkdir(parents=True, exist_ok=True)
     hp, tp = WORK / f"horizon_{tag}.npy", WORK / f"horizon_{tag}_hterr.npy"
+    hp_part, tp_part = WORK / f"horizon_{tag}.partial.npy", WORK / f"horizon_{tag}_hterr.partial.npy"
     prog_p, meta_p = WORK / f"horizon_{tag}.progress.json", WORK / f"horizon_{tag}.json"
     fp = WORK / f"features_{tag}.npz"
     if not a.features_only:
@@ -149,55 +193,28 @@ def main(argv=None) -> None:
         prog = json.loads(prog_p.read_text()) if prog_p.exists() and not a.force else {}
         if prog.get("params") != params:
             prog = {"params": params, "done": []}
-        mode = "r+" if hp.exists() and prog["done"] else "w+"
-        hm = np.lib.format.open_memmap(hp, mode=mode, dtype=np.uint8, shape=(n, n, a.naz))
-        ht = np.lib.format.open_memmap(tp, mode=mode, dtype=np.float32, shape=(n, n))
-        if mode == "w+":
-            hm[:] = 255
-            ht[:] = np.nan
-        done = set(prog["done"])
-        t_start = time.time()
         blocks = list(range(0, n, a.block))
-        rho_row_min = np.abs(ys)  # smallest rho in a row is |y|
-        for b0 in blocks:
-            if b0 in done:
-                continue
-            b1 = min(n, b0 + a.block)
-            if rho_row_min[b0:b1].min() > a.extent:
-                done.add(b0)
-                continue
-            # columns of the block that intersect rho <= extent
-            ymin = np.abs(ys[b0:b1]).min()
-            half = math.sqrt(max(0.0, a.extent ** 2 - ymin ** 2))
-            cols = np.flatnonzero(np.abs(xs) <= half + a.res)
-            out = np.full((b1 - b0, cols.size, a.naz), 255, np.uint8)
-            hh = np.full((b1 - b0, cols.size), np.nan)
-            H.region_rows(pyr.index, pyr.stack, zfine, xs[cols], ys[b0:b1], a.hobs, a.naz, a.alpha, 300e3, R_MOON,
-                          pyr.hmax, pyr.hmin, out, hh)
-            rr = np.hypot(xs[cols][None, :], ys[b0:b1][:, None])
-            out[rr > a.extent] = 255
-            hh[rr > a.extent] = np.nan
-            hm[b0:b1, cols[0]:cols[-1] + 1] = out
-            ht[b0:b1, cols[0]:cols[-1] + 1] = hh
-            hm.flush()
-            ht.flush()
-            done.add(b0)
-            prog["done"] = sorted(done)
-            write_json(prog_p, prog)
-            el = time.time() - t_start
-            log("horizon_maps", f"rows {b0}-{b1} done ({len(done)}/{len(blocks)} blocks, {el / 60:.1f} min elapsed)")
-        runtime = time.time() - t_start + prog.get("runtimeS", 0.0) if False else time.time() - t_start
-        prog["runtimeS"] = prog.get("runtimeS", 0.0) + runtime
-        write_json(prog_p, prog)
-        meta = {"version": 1, "res": a.res, "bbox": [float(xs[0] - a.res / 2), float(ys[-1] - a.res / 2),
-                                                      float(xs[-1] + a.res / 2), float(ys[0] + a.res / 2)],
-                "width": n, "height": n, "naz": a.naz, "e0": H.MAP_E0, "de": H.MAP_DE, "obsHeight": a.hobs,
-                "alpha": a.alpha, "dmax": 300e3, "zfine": zfine, "finestRes": T.res(zfine), "maxRho": a.extent,
-                "layout": "uint8[row(y desc)][col(x asc)][az k*360/naz]", "complete": len(done) == len(blocks),
-                "runtimeS": round(prog["runtimeS"], 1), "generated": now_iso(), "job": JOB}
-        write_json(meta_p, meta)
-        record_product(f"horizon_{tag}", hp, JOB)
-        log("horizon_maps", f"horizon map {n}x{n}x{a.naz} complete={meta['complete']} total {prog['runtimeS'] / 60:.1f} min")
+        up_to_date = (len(prog["done"]) == len(blocks) and hp.exists() and tp.exists() and meta_p.exists()
+                      and not hp_part.exists())
+        if up_to_date:
+            log("horizon_maps", f"horizon map up to date ({hp.name}); use --force to rebuild")
+        else:
+            if not hp_part.exists():
+                prog["done"] = []
+            if not build_map(a, pyr, zfine, xs, ys, blocks, prog, prog_p, hp_part, tp_part):
+                log("horizon_maps", "incomplete - rerun to resume")
+                return
+            hp_part.replace(hp)  # atomic: readers never see a half-built map
+            tp_part.replace(tp)
+            meta = {"version": 1, "res": a.res, "bbox": [float(xs[0] - a.res / 2), float(ys[-1] - a.res / 2),
+                                                          float(xs[-1] + a.res / 2), float(ys[0] + a.res / 2)],
+                    "width": n, "height": n, "naz": a.naz, "e0": H.MAP_E0, "de": H.MAP_DE, "obsHeight": a.hobs,
+                    "alpha": a.alpha, "dmax": 300e3, "zfine": zfine, "finestRes": T.res(zfine), "maxRho": a.extent,
+                    "layout": "uint8[row(y desc)][col(x asc)][az k*360/naz]", "complete": True,
+                    "runtimeS": round(prog["runtimeS"], 1), "generated": now_iso(), "job": JOB}
+            write_json(meta_p, meta)
+            record_product(f"horizon_{tag}", hp, JOB)
+            log("horizon_maps", f"horizon map {n}x{n}x{a.naz} complete, total {prog['runtimeS'] / 60:.1f} min")
     t0 = time.time()
     fmeta = compute_features(xs, ys, a.res, fp)
     record_product(f"features_{tag}", fp, JOB)

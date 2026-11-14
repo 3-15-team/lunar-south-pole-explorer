@@ -1,4 +1,4 @@
-# Primary demo stack: `make up` → http://localhost:${COMPOSE_PORT:-8088}
+# Primary demo stack: `make up` → http://localhost:${COMPOSE_PORT:-8642}
 # Paths are relative to the project root (Makefile passes --project-directory).
 name: lunar-explorer
 services:
@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: infra/web.Dockerfile
     ports:
-      - "${COMPOSE_PORT:-8088}:80"
+      - "${COMPOSE_PORT:-8642}:80"
     volumes:
       - ./data/web:/usr/share/nginx/html/data:ro
     restart: unless-stopped

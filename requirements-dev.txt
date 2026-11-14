@@ -1,6 +1,6 @@
 # Dev environment = pipeline + compute + test/lint tools.  make setup-py
 -r pipeline/requirements.txt
 -r services/compute/requirements.txt
-pytest>=8.0
-ruff>=0.5
-httpx>=0.27
+pytest==9.2.0
+ruff==0.17.5
+httpx==0.28.1

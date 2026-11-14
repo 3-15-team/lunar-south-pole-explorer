@@ -1,8 +1,8 @@
 # STATE — single source of truth (≤ 200 lines)
 
-- Updated: 2026-11-14 12:40 UTC (16:40 Yerevan) · session #1 · account 1 · repo split done
+- Updated: 2026-11-14 13:25 UTC (17:25 Yerevan) · session #2 · first session in the split repo
 - Pitch: **Sun 2026-11-15 18:00 Yerevan (14:00 UTC)** · freeze **Sun 14:30 Yerevan (10:30 UTC)**
-- Hours until freeze at update: **20.8 h**. Phase: P1–P3 done; P4 (video, submission page, polish) remains.
+- Hours until freeze at update: **21.1 h**. Phase: P1–P3 done; P4 (video, submission page, polish) remains.
 
 ## Phase & tasks
 
@@ -41,17 +41,14 @@ P4 — finish
 
 ## NEXT ACTION
 
-0. New repo bootstrap (session #2): data/, .venv, node_modules are NOT in git. Copy built data from the old
-   location instead of rebuilding: `cp -R ../explorer/sandbox/dima/data/{raw,web,work} data/` (≈ 4 GB; `data/web`
-   alone ≈ 1.1 GB is enough for the app), then `make setup && make verify`. The old docker stack (project
-   `lunar-explorer`, :8642) was started from the old path — `make down` + `make up` here re-binds volumes.
+0. ~~New repo bootstrap~~ done in session #2 (data copied, `.venv`/`node_modules` present, compose runs from this path, verify green).
 1. Paste the official challenge text into `docs/CHALLENGE.md`; re-check scope/catalogue against it.
 2. Record the demo video from `docs/DEMO.md` (demo link there) + English subtitles; fill `docs/SUBMISSION.md` links.
 3. Optional polish (cut list order applies): panorama look, VR (cut), texture L2 (out).
 
 ## Environment facts
 
-- Project root: repo `lunar-south-pole-explorer` (`…/2026-lunar-landing/lunar-south-pole-explorer`, branch `main`, no remote yet — ADR-019). Split from `3-15-team/explorer` `sandbox/dima`; the old copy there is frozen.
+- Project root: repo `lunar-south-pole-explorer` (`…/2026-lunar-landing/lunar-south-pole-explorer`, branch `main`, remote `origin` = `git@github.com:3-15-team/lunar-south-pole-explorer.git` — ADR-019). Split from `3-15-team/explorer` `sandbox/dima`; the old copy there is frozen.
 - macOS arm64 (M1 Max), Node 26.13, Python 3.12.12 (`.venv`), Docker 29.8 (OrbStack), GNU make 3.81.
 - Ports: web dev **5173** · compute **8000** · compose **8642** (8080, 8088, 8090, 5001 are taken by another local stack — do not touch it).
 - Data: `data/raw` (downloads, manifest-tracked), `data/work` (server-only), `data/web` (served at `/data`).
@@ -74,8 +71,9 @@ P4 — finish
 - Artemis III region points are approximate (LROC mosaic centres); Slater Plain omitted (no citable coordinate); Chang'e-7 approximate.
 - Connecting-ridge summit (5 m crest) vs Mazarico 60 m pixel: 0.82 vs 0.44 (scale mismatch, see VALIDATION).
 - Panorama far-field occlusion uses the observer's far horizon for all fragments (≤ 2.5 km walk radius) — documented approximation.
-- Restart the compute service after rebuilding data; `data/work/mosaic` (1.7 GB) is a deletable cache; ≈ 9.8 GB disk free.
+- Restart the compute service after rebuilding data; `data/work/mosaic` (1.7 GB) is a deletable cache; **≈ 4 GB disk free** (doctor warns < 10 GB); `data/raw/lola/LDEM_80S_80MPP_ADJ.TIF.part` (22 MB) is a stale partial download.
+- First `pytest` run in a fresh checkout once aborted (`Abort trap: 6`, cold numba JIT cache); reruns pass — rerun `make verify` before treating it as red.
 
 ## Last `make verify`
 
-- 2026-11-14 13:35 UTC: **green** — ruff ✓, pytest 61 passed, tsc ✓, vitest 22 passed, vite build ✓, smoke http://localhost:8642 ✓ (9/9).
+- 2026-11-14 13:22 UTC (session #2, split repo): **green** — ruff ✓, pytest 61 passed, tsc ✓, vitest 22 passed, vite build ✓, smoke http://localhost:8642 ✓ (9/9). (First attempt: pytest aborted once, see Known issues.)

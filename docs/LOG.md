@@ -14,3 +14,5 @@
 - 2026-11-14 13:30 compose port moved to 8642 (8080/8088/8090/5001 used by another local stack — untouched); `make up` + smoke 9/9 green.
 - 2026-11-14 13:35 `make verify` green end-to-end.
 - 2026-11-14 12:40 repo split: `git subtree split --prefix=sandbox/dima` → new repo `lunar-south-pole-explorer` (main, no remote); session #1 ends here, resume via `prompts/03_NEW_REPO_PROMPT.md`.
+- 2026-11-14 13:17 session #2, started; first session in the split repo, resumed from 4f7850d. Data/.venv/node_modules already in place; compose (:8642) already running from this path. Remote `origin` now set (3-15-team/lunar-south-pole-explorer).
+- 2026-11-14 13:22 `make verify` green (first run: pytest `Abort trap: 6` once, cold numba cache; reruns pass).

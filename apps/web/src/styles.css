@@ -30,7 +30,10 @@ button, input, select { font: inherit; color: inherit; }
 .app {
   display: grid;
   height: 100dvh;
-  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  --left-w: 300px;
+  --right-w: 360px;
+  --rail-w: 40px;
+  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas: 'top top top' 'left center right' 'bottom bottom bottom';
 }
@@ -38,6 +41,37 @@ button, input, select { font: inherit; color: inherit; }
 .left { grid-area: left; overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); }
 .center { grid-area: center; position: relative; min-height: 0; background: #000; }
 .right { grid-area: right; overflow-y: auto; border-left: 1px solid var(--line); background: var(--panel); padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.app.l-collapsed { --left-w: var(--rail-w); }
+.app.r-collapsed { --right-w: var(--rail-w); }
+/* the toggle floats over the first row so it doesn't push the panel content down */
+.left, .right { position: relative; }
+.panel-bar { position: absolute; z-index: 2; display: flex; }
+.left .panel-bar { top: 6px; left: 6px; }
+.left .panel-bar + .panel .panel-title { padding-left: 26px; }
+.right .panel-bar { top: 14px; right: 14px; }
+.right:not(.collapsed) .panel-bar + * { padding-right: 40px; }
+.panel-toggle { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; background: none; border: 1px solid transparent; border-radius: 6px; color: var(--muted); cursor: pointer; }
+.panel-toggle:hover { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+.left.collapsed, .right.collapsed { overflow: hidden; padding: 0; }
+.collapsed .panel-bar { position: static; justify-content: center; padding: 6px 0; }
+/* collapsed right panel keeps the key numbers visible */
+.app.r-collapsed { --right-w: 64px; }
+.right.collapsed { overflow-x: hidden; overflow-y: auto; scrollbar-width: none; gap: 0; }
+.rail { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 0 10px; }
+.rail-verdict { width: 36px; height: 5px; border-radius: 3px; background: var(--muted); }
+.rail-verdict.good { background: var(--good); }
+.rail-verdict.fair { background: var(--warn); }
+.rail-verdict.poor { background: var(--bad); }
+.rail-item { display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: default; text-align: center; }
+.rail-glyph { font-size: 13px; color: var(--muted); line-height: 1; }
+.rail-value { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: -0.03em; white-space: nowrap; }
+.rail-item.sun .rail-glyph { color: var(--accent); }
+.rail-item.earth .rail-glyph { color: var(--earth); }
+.rail-item.warn .rail-glyph { color: var(--bad); }
+.rail-item.good .rail-value { color: var(--good); }
+.rail-item.fair .rail-value { color: var(--warn); }
+.rail-item.poor .rail-value { color: var(--bad); }
+.rail-sep { width: 28px; border-top: 1px solid var(--line); }
 .bottom { grid-area: bottom; border-top: 1px solid var(--line); background: var(--panel); padding: 6px 12px 4px; }
 
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }

@@ -148,17 +148,22 @@ type Grade = 'good' | 'fair' | 'poor';
 const grade = (v: number, good: number, fair: number, higherBetter = true): Grade =>
   higherBetter ? (v >= good ? 'good' : v >= fair ? 'fair' : 'poor') : v <= good ? 'good' : v <= fair ? 'fair' : 'poor';
 
-/** One-glance verdict for the selected site and interval (the "first 5 seconds"). */
-export function Verdict() {
-  const m = metricsState.value?.metrics;
-  const s = site.value;
-  if (!m || !s) return null;
+function grades(m: { illumFrac: number; longestDarkH: number; earthFrac: number }) {
   const gi = grade(m.illumFrac, 0.7, 0.4);
   const gd = grade(m.longestDarkH, 24, 72, false);
   const ge = grade(m.earthFrac, 0.5, 0.2);
   const order: Record<Grade, number> = { good: 0, fair: 1, poor: 2 };
   const worst = [gi, gd, ge].reduce((a, b) => (order[b] > order[a] ? b : a));
   const headline = worst === 'good' ? 'Viable window' : worst === 'fair' ? 'Marginal window' : 'Risky window';
+  return { gi, gd, ge, worst, headline };
+}
+
+/** One-glance verdict for the selected site and interval (the "first 5 seconds"). */
+export function Verdict() {
+  const m = metricsState.value?.metrics;
+  const s = site.value;
+  if (!m || !s) return null;
+  const { gi, gd, ge, worst, headline } = grades(m);
   return (
     <div class={`verdict-box ${worst}`} role="status">
       <div class="verdict-head">{headline}</div>
@@ -167,6 +172,56 @@ export function Verdict() {
         <span class={`vchip ${gd}`}>☾ longest night {fmtHours(m.longestDarkH)}</span>
         <span class={`vchip ${ge}`}>🜨 Earth {fmtPct(m.earthFrac)}</span>
       </div>
+    </div>
+  );
+}
+
+/** Narrow countdown for the rail: "3d 4h", "5h", "40m". */
+function fmtShortDuration(ms: number): string {
+  const min = Math.round(Math.abs(ms) / 60000);
+  const d = Math.floor(min / 1440);
+  const h = Math.floor((min % 1440) / 60);
+  return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h` : `${min % 60}m`;
+}
+
+function RailItem(props: { glyph: string; value: string; tone?: string; title: string }) {
+  return (
+    <div class={`rail-item ${props.tone ?? ''}`} title={props.title} aria-label={`${props.title}: ${props.value}`}>
+      <span class="rail-glyph" aria-hidden="true">{props.glyph}</span>
+      <span class="rail-value">{props.value}</span>
+    </div>
+  );
+}
+
+/** Key numbers shown in the collapsed right panel: verdict, next transitions, interval summary. */
+export function MetricRail() {
+  const now = instant.value;
+  const ms = metricsState.value;
+  const mm = ms?.metrics;
+  const t = time.value;
+  if (siteError.value || !site.value || !siteResult.value) return <div class="rail-item muted" title="Computing…">…</div>;
+  const sunUp = now ? now.fSun > 0 : false;
+  const earthUp = now ? now.fEarth >= dte.value : false;
+  const g = mm ? grades(mm) : null;
+  return (
+    <div class="rail" aria-live="polite">
+      {g && <div class={`rail-verdict ${g.worst}`} title={g.headline} aria-label={g.headline} />}
+      <RailItem
+        glyph={sunUp ? '☀↓' : '☀↑'}
+        tone={sunUp ? 'sun' : 'warn'}
+        value={ms?.sunNext ? fmtShortDuration(ms.sunNext.t - t) : '>60d'}
+        title={sunUp ? 'Sunset in' : 'Sunrise in'}
+      />
+      <RailItem
+        glyph={earthUp ? '🜨↓' : '🜨↑'}
+        tone={earthUp ? 'earth' : 'warn'}
+        value={ms?.earthNext ? fmtShortDuration(ms.earthNext.t - t) : '>60d'}
+        title={earthUp ? 'Earthset in' : 'Earthrise in'}
+      />
+      <div class="rail-sep" />
+      <RailItem glyph="☀" tone={g?.gi} value={mm ? fmtPct(mm.illumFrac) : '…'} title="Illumination (interval)" />
+      <RailItem glyph="☾" tone={g?.gd} value={mm ? fmtHours(mm.longestDarkH).replace(' ', '') + (mm.longestDarkCensored ? '+' : '') : '…'} title="Longest darkness" />
+      <RailItem glyph="🜨" tone={g?.ge} value={mm ? fmtPct(mm.earthFrac) : '…'} title="Earth visibility (DTE)" />
     </div>
   );
 }

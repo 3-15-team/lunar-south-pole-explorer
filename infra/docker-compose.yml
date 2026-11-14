@@ -8,6 +8,9 @@ services:
       dockerfile: infra/web.Dockerfile
     ports:
       - "${COMPOSE_PORT:-8642}:80"
+    environment:
+      # panorama anti-aliasing: Gaussian sigma in CSS px (0.5 = original look); browser override: ?aa=1.5
+      PANO_AA_SIGMA: "${PANO_AA_SIGMA:-1.0}"
     volumes:
       - ./data/web:/usr/share/nginx/html/data:ro
     restart: unless-stopped

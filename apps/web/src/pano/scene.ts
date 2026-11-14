@@ -8,6 +8,7 @@ import { EARTH_RADIUS_KM, R_MOON_KM, R_MOON_M, SUN_RADIUS_KM, AU_KM, enuAt, latL
 import type { HorizonProfile } from '../core/horizon';
 import type { DemClient } from '../data/dem';
 import { mulberry32 } from '../core/suitability';
+import { config, PANO_AA_SIGMA_ORIGINAL } from '../config';
 
 export interface PanoSite {
   x: number;
@@ -37,6 +38,7 @@ uniform sampler2D uFarH;
 uniform vec3 uSun; uniform float uSunR; uniform float uFlux;
 uniform vec3 uEarth; uniform float uEarthPhase;
 uniform float uAmbient; uniform float uExposure; uniform vec3 uCam;
+uniform float uAA;   // prefilter width: multiplier of the pixel footprint (1 = original; = sigma / 0.5)
 const float TAU = 6.28318530718;
 const float PI = 3.14159265359;
 float hf(vec2 en) {
@@ -57,7 +59,7 @@ float regolith(vec2 p, float px) {
 void main() {
   vec2 en = vec2(vPos.x, -vPos.z);
   float dist = length(vPos - uCam);
-  float px = max(0.01, dist * 0.0012);
+  float px = max(0.01, dist * 0.0012 * uAA);
   float d = max(0.5, px);
   vec2 g = vec2(hf(en + vec2(d, 0.0)) - hf(en - vec2(d, 0.0)), hf(en + vec2(0.0, d)) - hf(en - vec2(0.0, d))) / (2.0 * d);
   float e = max(px, 0.02);
@@ -67,8 +69,9 @@ void main() {
   vec3 s = normalize(vec3(uSun.x, -uSun.z, uSun.y));                       // world → ENU
   float lambert = max(dot(nE, s), 0.0);
   float sunEl = asin(clamp(s.z, -1.0, 1.0));
-  float fS = 0.0;
-  if (lambert > 0.0 && sunEl + uSunR > -0.05) {
+  bool sunUp = lambert > 0.0 && sunEl + uSunR > -0.05;
+  float z = -1.0;   // (sunEl - occluder) / sun radius, clamped; -1 = fully hidden
+  if (sunUp) {
     vec2 dir = normalize(s.xy);
     float tanStop = tan(sunEl + uSunR * 1.2);
     float best = -1e6;
@@ -83,8 +86,13 @@ void main() {
     }
     float az = atan(s.x, s.y);
     float farEl = texture2D(uFarH, vec2(fract(az / TAU), 0.5)).r;
-    fS = edgeFrac((sunEl - max(atan(best), farEl)) / uSunR);
+    z = clamp((sunEl - max(atan(best), farEl)) / uSunR, -1.0, 1.0);
   }
+  // analytic shadow-edge AA: where the edge is sharper than ~uAA pixels on screen, widen the
+  // disk-occlusion transition to that width; resolvable physical penumbrae are untouched.
+  // fwidth must run in uniform control flow, hence outside the branch above.
+  float w = max(1.0, 0.5 * uAA * fwidth(z));
+  float fS = sunUp ? edgeFrac(z / w) : 0.0;
   float slope = degrees(acos(clamp(normalize(vec3(-g, 1.0)).z, -1.0, 1.0)));
   float albedo = 0.12 * (1.0 + 0.45 * n0) * (1.0 + 0.2 * smoothstep(15.0, 35.0, slope));
   vec3 eDir = normalize(vec3(uEarth.x, -uEarth.z, uEarth.y));
@@ -133,6 +141,66 @@ void main() {
   gl_FragColor = vec4(pow(c, vec3(1.0 / 2.2)), 1.0);
 }`;
 
+const SRGB = /* glsl */ `
+vec3 srgbEncode(vec3 c) { c = max(c, 0.0); return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }`;
+const starVert = /* glsl */ `
+attribute vec3 color;
+uniform float uSize;
+varying vec3 vCol;
+void main() { vCol = color; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_PointSize = uSize; }`;
+const starFrag = /* glsl */ `
+precision highp float;
+varying vec3 vCol;
+${SRGB}
+void main() { gl_FragColor = vec4(srgbEncode(vCol), 1.0); }`;
+const skirtVert = /* glsl */ `
+attribute vec3 color;
+varying vec3 vCol;
+void main() { vCol = color; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const skirtFrag = starFrag;
+
+// Anti-aliasing resolve (separable Gaussian, one axis per pass). Source texels are fetched exactly;
+// weights use the distance from the destination pixel centre mapped into source texel space.
+const resolveVert = /* glsl */ `
+void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+const resolveFrag = /* glsl */ `
+precision highp float;
+uniform sampler2D uSrc;
+uniform vec2 uSrcSize;
+uniform vec2 uDstSize;
+uniform vec2 uAxis;       // (1,0) horizontal or (0,1) vertical
+uniform float uSigma;     // in source texels
+uniform int uRadius;      // taps each side
+uniform int uDecode;      // source is sRGB-encoded
+uniform int uEncode;      // write sRGB-encoded
+${SRGB}
+vec3 srgbDecode(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
+void main() {
+  vec2 sp = gl_FragCoord.xy * uSrcSize / uDstSize;      // destination pixel centre in source texel coords
+  float c = dot(sp, uAxis);
+  float base = floor(c - 0.5);
+  ivec2 other = ivec2(floor(sp * (1.0 - uAxis)));
+  ivec2 mx = ivec2(uSrcSize) - 1;
+  vec3 acc = vec3(0.0);
+  float wsum = 0.0;
+  for (int k = -24; k <= 25; k++) {
+    if (k < -uRadius || k > uRadius + 1) continue;
+    float t = base + float(k);
+    float d = t + 0.5 - c;
+    float w = exp(-0.5 * d * d / (uSigma * uSigma));
+    ivec2 ij = clamp(other + ivec2(uAxis) * int(t), ivec2(0), mx);
+    vec3 v = texelFetch(uSrc, ij, 0).rgb;
+    acc += w * (uDecode == 1 ? srgbDecode(v) : v);
+    wsum += w;
+  }
+  vec3 col = acc / wsum;
+  gl_FragColor = vec4(uEncode == 1 ? srgbEncode(col) : col, 1.0);
+}`;
+
+/** Supersampled frame budget (render-target pixels) and maximum per-axis supersampling. */
+const SS_BUDGET_PX = 8.3e6;
+const SS_MAX = 2;
+
 export interface PanoState {
   sunAz: number;
   sunEl: number;
@@ -164,6 +232,13 @@ export class PanoScene {
   pitch = 0.02;
   pos = new THREE.Vector2(0, 0); // (e, n) metres from the site
   ambient = 0.03;
+  /** AA Gaussian sigma in CSS px (config); <= PANO_AA_SIGMA_ORIGINAL renders directly (original path). */
+  readonly aaSigma = config.panoAASigma;
+  private rtScene: THREE.WebGLRenderTarget | null = null;
+  private rtPass: THREE.WebGLRenderTarget | null = null;
+  private resolveMat: THREE.ShaderMaterial | null = null;
+  private resolveScene: THREE.Scene | null = null;
+  private resolveCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   state: PanoState = { sunAz: 0, sunEl: 0, earthAz: 0, earthEl: 0, earthPhase: 0, heading: 0 };
 
   constructor(
@@ -199,6 +274,7 @@ export class PanoScene {
         uAmbient: { value: 0.03 },
         uExposure: { value: 11 },
         uCam: { value: new THREE.Vector3() },
+        uAA: { value: Math.max(0.25, this.aaSigma / PANO_AA_SIGMA_ORIGINAL) },
       },
     });
     this.sun = new THREE.Mesh(
@@ -366,7 +442,7 @@ export class PanoScene {
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     g.setIndex(idx);
-    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+    const m = new THREE.Mesh(g, new THREE.ShaderMaterial({ vertexShader: skirtVert, fragmentShader: skirtFrag, side: THREE.DoubleSide }));
     m.frustumCulled = false;
     return m;
   }
@@ -388,7 +464,7 @@ export class PanoScene {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, depthWrite: false }));
+    const p = new THREE.Points(g, new THREE.ShaderMaterial({ vertexShader: starVert, fragmentShader: starFrag, uniforms: { uSize: { value: 1.6 } }, depthWrite: false }));
     p.matrixAutoUpdate = false;
     p.frustumCulled = false;
     return p;
@@ -512,7 +588,79 @@ export class PanoScene {
     const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
     this.camera.lookAt(this.camera.position.clone().add(dir));
     this.terrainMat.uniforms.uCam.value.copy(this.camera.position);
+    const dpr = r.getPixelRatio();
+    const W = r.domElement.width;
+    const H = r.domElement.height;
+    if (this.aaSigma <= PANO_AA_SIGMA_ORIGINAL || W < 2 || H < 2) {
+      (this.stars.material as THREE.ShaderMaterial).uniforms.uSize.value = 1.6 * dpr;
+      r.setRenderTarget(null);
+      r.render(this.scene, this.camera);
+      return;
+    }
+    // supersample (≤ SS_MAX per axis, within the pixel budget), then resolve with a Gaussian of
+    // sigma = aaSigma CSS px: horizontal pass into rtPass (dst width × src height), vertical to canvas
+    const ss = Math.max(1, Math.min(SS_MAX, Math.sqrt(SS_BUDGET_PX / (W * H))));
+    const sw = Math.round(W * ss);
+    const sh = Math.round(H * ss);
+    this.ensureTargets(sw, sh, W);
+    (this.stars.material as THREE.ShaderMaterial).uniforms.uSize.value = 1.6 * dpr * ss;
+    r.setRenderTarget(this.rtScene);
     r.render(this.scene, this.camera);
+    const sigmaSrc = this.aaSigma * dpr * ss;
+    const radius = Math.min(24, Math.ceil(3 * sigmaSrc));
+    const u = this.resolveMat!.uniforms;
+    u.uSigma.value = sigmaSrc;
+    u.uRadius.value = radius;
+    u.uSrc.value = this.rtScene!.texture;
+    u.uSrcSize.value.set(sw, sh);
+    u.uDstSize.value.set(W, sh);
+    u.uAxis.value.set(1, 0);
+    u.uDecode.value = 1;
+    u.uEncode.value = 0;
+    r.setRenderTarget(this.rtPass);
+    r.render(this.resolveScene!, this.resolveCam);
+    u.uSrc.value = this.rtPass!.texture;
+    u.uSrcSize.value.set(W, sh);
+    u.uDstSize.value.set(W, H);
+    u.uAxis.value.set(0, 1);
+    u.uSigma.value = sigmaSrc; // vertical source spacing is still the supersampled one
+    u.uDecode.value = 0;
+    u.uEncode.value = 1;
+    r.setRenderTarget(null);
+    r.render(this.resolveScene!, this.resolveCam);
+  }
+
+  private ensureTargets(sw: number, sh: number, W: number): void {
+    if (!this.rtScene) {
+      this.rtScene = new THREE.WebGLRenderTarget(sw, sh, { samples: 4, depthBuffer: true });
+      this.rtPass = new THREE.WebGLRenderTarget(W, sh, { type: THREE.HalfFloatType, depthBuffer: false });
+      for (const t of [this.rtScene.texture, this.rtPass.texture]) {
+        t.minFilter = t.magFilter = THREE.NearestFilter;
+        t.generateMipmaps = false;
+      }
+      this.resolveMat = new THREE.ShaderMaterial({
+        vertexShader: resolveVert,
+        fragmentShader: resolveFrag,
+        depthTest: false,
+        depthWrite: false,
+        uniforms: {
+          uSrc: { value: null },
+          uSrcSize: { value: new THREE.Vector2() },
+          uDstSize: { value: new THREE.Vector2() },
+          uAxis: { value: new THREE.Vector2(1, 0) },
+          uSigma: { value: 1 },
+          uRadius: { value: 3 },
+          uDecode: { value: 0 },
+          uEncode: { value: 0 },
+        },
+      });
+      this.resolveScene = new THREE.Scene();
+      const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.resolveMat);
+      quad.frustumCulled = false;
+      this.resolveScene.add(quad);
+    }
+    if (this.rtScene.width !== sw || this.rtScene.height !== sh) this.rtScene.setSize(sw, sh);
+    if (this.rtPass!.width !== W || this.rtPass!.height !== sh) this.rtPass!.setSize(W, sh);
   }
 
   lookAtAzimuth(azDeg: number): void {
@@ -526,6 +674,9 @@ export class PanoScene {
       const mat = m.material as THREE.Material | undefined;
       mat?.dispose();
     });
+    this.rtScene?.dispose();
+    this.rtPass?.dispose();
+    this.resolveMat?.dispose();
     this.renderer.dispose();
   }
 }

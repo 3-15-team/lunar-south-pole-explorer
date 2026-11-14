@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import { loadConfig } from './config';
 import { Ephemeris } from './core/ephemeris';
 import { DemClient } from './data/dem';
 import { loadCatalog } from './data/sites';
@@ -25,6 +26,7 @@ const COMPUTE_BASE = (import.meta.env.VITE_COMPUTE_BASE as string | undefined) ?
 async function boot(): Promise<void> {
   services.dataBase = DATA_BASE;
   services.computeBase = COMPUTE_BASE;
+  await loadConfig(new URL('config.json', document.baseURI).pathname);
   initUrlSync();
   render(<App />, document.getElementById('app')!);
 

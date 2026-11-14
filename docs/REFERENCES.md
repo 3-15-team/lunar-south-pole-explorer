@@ -13,6 +13,11 @@
 | NASA SVS south-pole illumination visualizations | https://svs.gsfc.nasa.gov/4930/ | visual sanity check of the shadow layer |
 | Teammate prototype (Babylon.js LOLA Site04 viewer, repo root `/dist`) | team repository | ideas only (ADR-012), no code imported |
 
+- LOLA global gridded DEM `ldem_16` (16 px/deg), LRO LOLA GDR, NASA PDS Geosciences Node,
+  https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ —
+  context Moon outside 80°S on the map (Smith, D. E., et al. (2010). The Lunar Orbiter Laser Altimeter
+  investigation on the Lunar Reconnaissance Orbiter mission. *Space Sci. Rev.* 150, 209–241).
+
 ## Papers
 
 - Barker, M. K., et al. (2021). Improved LOLA elevation maps for south pole landing sites: error estimates and their impact on illumination conditions. *Planetary and Space Science* 203, 105119. https://doi.org/10.1016/j.pss.2020.105119

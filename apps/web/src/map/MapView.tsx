@@ -104,17 +104,30 @@ export default function MapView() {
 
     // graticule
     const grat = new VectorSource();
-    for (let lat = -89; lat >= -80; lat -= 1) {
+    for (let lat = -89; lat >= -81; lat -= 1) {
       const f = new Feature(new LineString(latitudeRing(lat)));
       f.set('label', `${-lat}°S`);
       grat.addFeature(f);
     }
-    for (let lon = -150; lon <= 180; lon += 30) grat.addFeature(new Feature(new LineString(meridian(lon))));
+    // context Moon (outside the polar data): coarse graticule down to the equator
+    for (const lat of [-70, -60, -50, -40, -30, -20, -10, 0]) {
+      const f = new Feature(new LineString(latitudeRing(lat, 360)));
+      f.set('label', lat === 0 ? 'equator' : `${-lat}°S`);
+      grat.addFeature(f);
+    }
+    for (let lon = -150; lon <= 180; lon += 30) grat.addFeature(new Feature(new LineString(meridian(lon, 0, -89.9, 120))));
+    // edge of the high-resolution polar data (everything outside is LOLA global 16 px/deg context)
+    const edge = new Feature(new LineString(latitudeRing(-80, 360)));
+    edge.set('label', '80°S · end of high-res polar data (outside: global context)');
+    edge.set('edge', true);
+    grat.addFeature(edge);
     const gratLayer = new VectorLayer({
       source: grat,
       style: (f) =>
         new Style({
-          stroke: new Stroke({ color: 'rgba(255,255,255,0.16)', width: 1 }),
+          stroke: f.get('edge')
+            ? new Stroke({ color: 'rgba(255,200,90,0.55)', width: 1.5, lineDash: [6, 5] })
+            : new Stroke({ color: 'rgba(255,255,255,0.16)', width: 1 }),
           text: f.get('label')
             ? new Text({ text: f.get('label'), placement: 'line', font: '10px system-ui', fill: new Fill({ color: 'rgba(255,255,255,0.55)' }) })
             : undefined,
@@ -147,8 +160,9 @@ export default function MapView() {
       center: v ? [v.x, v.y] : [0, 0],
       resolution: v?.res ?? 330,
       minResolution: 0.6,
-      maxResolution: 2000,
-      extent: [-310000, -310000, 310000, 310000],
+      maxResolution: 12000,
+      // the whole southern hemisphere (context Moon) can be shown; the analysis stays inside 80°S
+      extent: [-TerrainEngine.OUTER_HALF, -TerrainEngine.OUTER_HALF, TerrainEngine.OUTER_HALF, TerrainEngine.OUTER_HALF],
       constrainOnlyCenter: true,
       enableRotation: false,
     });

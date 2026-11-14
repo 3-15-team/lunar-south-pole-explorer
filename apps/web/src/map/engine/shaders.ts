@@ -22,6 +22,9 @@ const float NODATA = -10000.0;
 uniform sampler2D uFar;  uniform vec4 uFarRect;  uniform float uFarMaxLod;
 uniform sampler2D uNear; uniform vec4 uNearRect; uniform float uNearMaxLod; uniform float uNearValid;
 uniform float uMaxRho;
+// context Moon outside the coverage (display pass only; analysis passes never set gOuter)
+uniform sampler2D uOuter; uniform vec4 uOuterRect; uniform float uOuterMaxLod; uniform float uOuterValid; uniform float uOuterRho;
+bool gOuter = false;   // this fragment lies outside the polar coverage → its rays may use uOuter
 
 float texDem(sampler2D t, vec4 rect, float maxLod, vec2 p, float res) {
   vec2 uv = vec2(p.x - rect.x, rect.y - p.y) / (rect.z * rect.w);
@@ -48,7 +51,12 @@ bool inRect(vec4 rect, vec2 p, float inset) {
   vec2 uv = vec2(p.x - rect.x, rect.y - p.y) / (rect.z * rect.w);
   return all(greaterThan(uv, vec2(inset))) && all(lessThan(uv, vec2(1.0 - inset)));
 }
+bool useOuter(vec2 p) {
+  float b = uMaxRho - 3.0 * uFarRect.z;   // stay clear of the polar raster's nodata edge
+  return gOuter && dot(p, p) > b * b;
+}
 float demHeight(vec2 p, float res) {
+  if (useOuter(p)) return texDem(uOuter, uOuterRect, uOuterMaxLod, p, res);
   if (uNearValid > 0.5 && inRect(uNearRect, p, 0.0005)) {
     float h = texDem(uNear, uNearRect, uNearMaxLod, p, res);
     if (h > NODATA) return h;
@@ -56,6 +64,7 @@ float demHeight(vec2 p, float res) {
   return texDem(uFar, uFarRect, uFarMaxLod, p, res);
 }
 float demRes(vec2 p) {
+  if (useOuter(p)) return uOuterRect.z;
   return (uNearValid > 0.5 && inRect(uNearRect, p, 0.0005)) ? uNearRect.z : uFarRect.z;
 }
 vec3 unitFromXY(vec2 p) {
@@ -75,7 +84,8 @@ float marchMaxTan(vec2 p, vec3 uo, float ho, vec2 dir, float s0, float minStep, 
   for (int j = 0; j < 640; j++) {
     if (s > maxDist) break;
     vec2 q = p + dir * s;
-    if (dot(q, q) > uMaxRho * uMaxRho) break;
+    float lim = gOuter ? uOuterRho : uMaxRho;
+    if (dot(q, q) > lim * lim) break;
     float st = max(alpha * s, minStep);
     float h = demHeight(q, st);
     if (h > NODATA) {
@@ -289,8 +299,10 @@ float clamp01(float x) { return clamp(x, 0.0, 1.0); }
 void main() {
   vec2 p = uView.xy + (gl_FragCoord.xy - 0.5 * uCanvas) * uView.z;
   float px = uView.z;
+  gOuter = uOuterValid > 0.5 && dot(p, p) > uMaxRho * uMaxRho;
   float h = demHeight(p, px);
-  if (h <= NODATA || dot(p, p) > uMaxRho * uMaxRho) { o = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  float lim = gOuter ? uOuterRho : uMaxRho;
+  if (h <= NODATA || dot(p, p) > lim * lim) { o = vec4(0.0, 0.0, 0.0, 1.0); return; }
   float dres = demRes(p);
   float d = max(px, dres);
   float k = 1.0 + dot(p, p) / (4.0 * R * R);
@@ -300,7 +312,7 @@ void main() {
   vec2 Eg = vec2(cos(lon), -sin(lon));
   vec2 Ng = vec2(sin(lon), cos(lon));
   // procedural micro-relief only where we are magnified beyond the DEM grid
-  float detail = smoothstep(1.0, 4.0, dres / px);
+  float detail = gOuter ? 0.0 : smoothstep(1.0, 4.0, dres / px);
   vec2 bump = vec2(0.0);
   if (detail > 0.0) {
     float e = max(px, 0.5);
@@ -342,6 +354,8 @@ void main() {
   if (uLayer == 1) {
     if (lambert > 0.0 && fS < 0.02) col = mix(col, vec3(0.12, 0.22, 0.5), 0.55);
     else if (lambert > 0.0 && fS < 0.98) col = mix(col, vec3(1.0, 0.6, 0.15), 0.45);
+  } else if (uLayer >= 2 && gOuter) {
+    col *= 0.7;   // analysis layers exist only inside the coverage; context Moon stays lit relief
   } else if (uLayer >= 2) {
     float neutral = 0.18 + 0.5 * clamp01(1.0 - slopeDeg / 40.0) + 0.25 * regolith(p, px);
     vec3 base = vec3(neutral);
@@ -379,6 +393,8 @@ void main() {
     }
     col = mix(base * 0.85, lc, alpha);
   }
+  // context Moon: same light and shadows, slightly dimmer and cooler so the data edge reads as such
+  if (gOuter) col = mix(col, vec3(dot(col, vec3(0.333))) * vec3(0.92, 0.95, 1.05), 0.6) * 0.82;
   o = vec4(col, 1.0);
 }
 `;

@@ -30,6 +30,26 @@
    "size": 254808965,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ_ERR.TIF"
   },
+  "ldem-global-16": {
+   "description": "LOLA global gridded DEM, 16 px/deg simple cylindrical, int16 LSB, height = DN*0.5 m above 1737.4 km; context Moon outside 80S on the map",
+   "fetched_utc": "2026-11-14T22:33:10Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA PDS Geosciences Node, LRO LOLA GDR)",
+   "path": "raw/lola_global/ldem_16.img",
+   "sha256": "a511e40d7a3ea3275945b4da2a1df377133264fab0be94b7434b1cf8907254cb",
+   "size": 33177600,
+   "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.img"
+  },
+  "ldem-global-16-lbl": {
+   "description": "PDS label of ldem_16.img",
+   "fetched_utc": "2026-11-14T22:33:11Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA PDS Geosciences Node, LRO LOLA GDR)",
+   "path": "raw/lola_global/ldem_16.lbl",
+   "sha256": "9aef29463ccc6ed3a3fbe0df3ecd830a99c69e16b564f455507dee2697096579",
+   "size": 5121,
+   "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.lbl"
+  },
   "mazarico-earth-85s": {
    "description": "Mazarico et al. average Earth visibility 85S-90S, 60 m (REFERENCE ONLY, validation)",
    "fetched_utc": "2026-11-14T10:06:09Z",
@@ -405,6 +425,16 @@
    "path": "web/micro/SHA256SUMS",
    "sha256": "ac1a130284f80ab6c900ab1f25284c59ed9abf234391cca13f8eb739b0730c1e",
    "size": 152
+  },
+  "outer_dem": {
+   "bytes": 6276453,
+   "files": 1,
+   "generated": "2026-11-14T22:33:41Z",
+   "job": "pipeline/jobs/outer_dem.py",
+   "kind": "tree",
+   "path": "web/outer/SHA256SUMS",
+   "sha256": "6b602fac84b49e0dd49e500b46f2bea505536bfb5823c94c4ca63a5c47af605d",
+   "size": 74
   },
   "psr": {
    "generated": "2026-11-14T10:34:38Z",

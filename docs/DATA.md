@@ -150,6 +150,15 @@ Static fallback for `services/compute` (`POST /api/v1/heatmap` returns the same 
 craters 0.25–5 m, boulders 0.15–2 m); `fine`: 4 m / 1024² (3.9 mm px; craterlets 4–60 cm, pebbles 1–15 cm).
 Built by `pipeline/jobs/micro_relief.py` (deterministic seeds, ≈ 2 s). Never used by metrics.
 
+## 6c. Context Moon outside the polar coverage — `data/web/outer/` (display only)
+
+`index.json` (`file`, `x0`, `y0`, `res`, `n`, `maxRho`, `latMax`, `source`) and `dem.bin`: one LDT1 raster
+(gzip, row 0 = +y edge) in the same SPS frame, 2048² × 3398 m out to the equator (ρ ≤ 2R), heights above
+1737.4 km. Source: LOLA global GDR `ldem_16.img` (16 px/deg, PDS Geosciences Node; `sources.json`
+`ldem-global-16`), 3×3 point-sample mean per pixel. Built by `pipeline/jobs/outer_dem.py` (≈ 3 s).
+Used only by the map's display pass for pixels outside the coverage; analysis and metrics never see it.
+Seam check at ρ = 290 km vs the polar z0 tiles: mean 6 m, RMS 212 m (resolution difference).
+
 ## 7. Server-side work products — `data/work/` (never shipped to the browser)
 
 - `horizon_{res}m.npy` + `.json`: region horizon map, `uint8[ny][nx][naz]` —

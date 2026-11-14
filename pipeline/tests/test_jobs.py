@@ -131,3 +131,19 @@ def test_micro_relief_tiles_are_periodic_deterministic_and_follow_the_sfd():
     levels = M.mip_chain(np.stack([g1, r1], -1))
     assert [lv.shape[0] for lv in levels] == [128, 64, 32, 16, 8, 4, 2, 1]
     assert levels[-1][0, 0, 0] == pytest.approx(g1.mean(), abs=1e-6)
+
+
+def test_outer_dem_resampling_wraps_longitude_and_masks_the_north():
+    from pipeline.jobs import outer_dem as O
+
+    rows, cols = 180 * O.PPD, 360 * O.PPD
+    lat = 90.0 - (np.arange(rows) + 0.5) / O.PPD
+    lon = (np.arange(cols) + 0.5) / O.PPD
+    dem = (100.0 * lat[:, None] + 0.0 * lon[None, :]).astype(np.float32)  # h = 100 m per degree latitude
+    # bilinear in latitude is exact for a linear field; longitude wraps across 0/360
+    v = O.sample_ldem(dem, np.array([-45.3, -45.3]), np.array([359.99, -0.01]))
+    assert v == pytest.approx([-4530.0, -4530.0], abs=1e-3)
+    h = O.build(dem, n=64, half=O.HALF, sub=2)
+    assert np.isnan(h[0, 0])  # corner: beyond the equator
+    c = h[32, 32]  # pixel touching the pole (108 km wide): mean lat ≈ -87…-88°
+    assert -9000.0 < c < -8500.0

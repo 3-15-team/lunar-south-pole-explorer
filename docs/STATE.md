@@ -38,6 +38,8 @@ P4 — finish
 - [x] T-040 docs: README, DEMO (real numbers), REFERENCES, SUBMISSION, VALIDATION, API
 - [x] T-041 `make verify` green; `make up` → http://localhost:8642 all smoke checks green
 - [~] T-043 configurable panorama anti-aliasing — merged as PR #3, then **reverted** (ADR-114)
+- [x] T-044 panorama relief AA (ADR-115): cubic height interpolation `PANO_TERRAIN_INTERP` + footprint-correct relief prefilter `PANO_RELIEF_AA`
+- [x] T-045 DEM fallback bug (ADR-116): TS coarse-level fallback = Python `sample_clip` (no more nearest-neighbour plateaus outside 5 m DEMs)
 - [ ] T-042 demo video + English subtitles (team; script in `docs/DEMO.md`)
 
 ## NEXT ACTION
@@ -55,6 +57,7 @@ P4 — finish
 - Data: `data/raw` (downloads, manifest-tracked), `data/work` (server-only), `data/web` (served at `/data`).
 - Disk free ≈ 13 GB after downloads/tiles (watch it: 40 m DEM + z6 tiles ≈ +1 GB).
 - Headless visual check: `node <scratchpad>/pw/shot.mjs` (playwright-core driving installed Chrome; real GPU via ANGLE Metal).
+- Panorama relief: `make up PANO_TERRAIN_INTERP=bilinear|catmull|mitchell|bspline PANO_RELIEF_AA=1` (→ `/config.json`), browser overrides `?interp=…&raa=…`; `bilinear` + `0` = original look.
 - Demo scenario scan: `cd apps/web && npx vite-node scripts/demo-scan.ts`.
 
 ## Performance (measured, M1 Max, Chrome)

@@ -37,6 +37,19 @@ make smoke        # check key endpoints
 make down
 ```
 
+Panorama relief rendering is configurable at runtime (no rebuild; `?interp=…&raa=…` in the page URL
+overrides it for one tab):
+
+- `PANO_TERRAIN_INTERP` = `bilinear` (original) | `catmull` (default; Catmull-Rom, passes through every
+  DEM sample, C1) | `mitchell` | `bspline` (C2, smoothest) — height-field interpolation for mesh, camera
+  height and shading normals.
+- `PANO_RELIEF_AA` = relief prefilter width as a multiple of the true pixel footprint on the ground
+  (default `1`; `2` = smoother relief; `0` = the original isotropic estimate). Filters relief detail only;
+  the image is not blurred.
+
+Example: `make up PANO_TERRAIN_INTERP=bspline PANO_RELIEF_AA=1.5`, or
+`http://localhost:8642/?interp=bilinear&raa=0#m=pano` for the original look.
+
 Other useful targets (`make help` lists all):
 
 | target | what |

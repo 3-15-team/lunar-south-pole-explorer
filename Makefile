@@ -17,8 +17,10 @@ COMPUTE_PORT   ?= 8000
 COMPOSE_PORT   ?= 8642
 DEPLOY_TARGET  ?= none
 DATA_BASE_URL  ?=
+PANO_TERRAIN_INTERP ?= catmull
+PANO_RELIEF_AA ?= 1
 COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-directory $(ROOT)
-export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL
+export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \

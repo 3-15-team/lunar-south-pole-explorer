@@ -8,6 +8,11 @@ services:
       dockerfile: infra/web.Dockerfile
     ports:
       - "${COMPOSE_PORT:-8642}:80"
+    environment:
+      # panorama height-field interpolation: bilinear|catmull|mitchell|bspline (browser override: ?interp=…)
+      PANO_TERRAIN_INTERP: "${PANO_TERRAIN_INTERP:-catmull}"
+      # panorama relief anti-aliasing: pixel-footprint scale (1 = one pixel, 0 = legacy); override: ?raa=…
+      PANO_RELIEF_AA: "${PANO_RELIEF_AA:-1}"
     volumes:
       - ./data/web:/usr/share/nginx/html/data:ro
     restart: unless-stopped

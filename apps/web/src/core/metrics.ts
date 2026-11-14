@@ -68,8 +68,13 @@ export interface Series {
   fEarth: Float32Array;
 }
 
-export function sampleSeries(ctx: SiteContext, t0: number, t1: number, stepMs: number): Series {
-  const n = Math.max(2, Math.floor((t1 - t0) / stepMs) + 1);
+/**
+ * ADR-104 (same as lunarcore): N = max(1, round((t1−t0)/step)) samples at t0 + k·dt,
+ * dt = (t1−t0)/N, each sample standing for dt (sums equal the interval length exactly).
+ */
+export function sampleSeries(ctx: SiteContext, t0: number, t1: number, step: number): Series {
+  const n = Math.max(1, Math.round((t1 - t0) / step));
+  const stepMs = (t1 - t0) / n;
   const s: Series = {
     n,
     t0,
@@ -210,12 +215,12 @@ export function intervalMetrics(s: Series, dte = 0.5): IntervalMetrics {
     pv += f * Math.cos(el * DEG) * s.sunFlux[i];
     ph += f * Math.max(0, Math.sin(el * DEG)) * s.sunFlux[i];
   }
-  if (open >= 0) windows.push([open, s.t0 + (s.n - 1) * s.stepMs]);
+  if (open >= 0) windows.push([open, s.t0 + s.n * s.stepMs]);
   pv /= s.n;
   ph /= s.n;
   return {
     ...base,
-    hours: ((s.n - 1) * s.stepMs) / HOUR,
+    hours: (s.n * s.stepMs) / HOUR,
     dteWindows: windows,
     sunElStats: elN ? { min: elMin, mean: elSum / elN, max: elMax } : null,
     earthElStats: { min: eMin, mean: eSum / s.n, max: eMax },
@@ -252,7 +257,7 @@ export function nextTransition(ctx: SiteContext, t: number, body: Body, dte = 0.
         if (isUp(ctx, mid, body, dte) === start) lo = mid;
         else hi = mid;
       }
-      return { t: hi, kind: start ? 'set' : 'rise' };
+      return { t: (lo + hi) / 2, kind: start ? 'set' : 'rise' };
     }
     a = b;
   }

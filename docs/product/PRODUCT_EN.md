@@ -191,7 +191,7 @@ Surface micro-texture, the intro Moon, the star field and the Earth pattern are 
 ## 7. Running it
 
 ```bash
-cd sandbox/dima
+cd lunar-south-pole-explorer
 make setup      # Python environment + npm install
 make data-min   # minimal data set (or `make data` for everything)
 make dev        # http://localhost:5173 (+ compute API on :8000)

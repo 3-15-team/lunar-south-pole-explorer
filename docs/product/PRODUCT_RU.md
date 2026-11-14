@@ -200,7 +200,7 @@ Lunar South Pole Site Explorer — веб-приложение для сравн
 ## 7. Запуск
 
 ```bash
-cd sandbox/dima
+cd lunar-south-pole-explorer
 make setup      # Python-окружение + npm install
 make data-min   # минимальный набор данных (или `make data` — всё)
 make dev        # http://localhost:5173 (+ compute API на :8000)

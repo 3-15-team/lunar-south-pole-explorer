@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
 ```
-sandbox/dima/                      (project root; the team repo keeps a teammate prototype at its root)
+lunar-south-pole-explorer/          (repository root; split from 3-15-team/explorer sandbox/dima, ADR-019)
 ├── apps/web/                      Vite + TypeScript + Preact SPA (static, works without any server)
 │   └── src/
 │       ├── core/                  pure TS physics: geo, ephemeris, horizon, disk, metrics, time

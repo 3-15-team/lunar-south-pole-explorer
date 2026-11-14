@@ -23,7 +23,7 @@ FastAPI `compute` service accelerates region-scale heatmaps and robustness Monte
 Prerequisites: Node ≥ 20, Python 3.12, (optional) Docker; ~3 GB free disk for the minimal data set.
 
 ```bash
-cd sandbox/dima
+cd lunar-south-pole-explorer
 make setup        # .venv + Python deps + npm install
 make data-min     # NAIF kernels + LOLA 80 m DEM → ephemeris tables, DEM tiles, sites, PSRs (~15 min, PGDA is slow)
 make dev          # web on http://localhost:5173 (+ compute API on :8000)

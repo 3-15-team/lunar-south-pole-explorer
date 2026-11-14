@@ -52,6 +52,20 @@ Other useful targets (`make help` lists all):
 Keyboard: `Space` play/pause · `←/→` ±1 h (`Shift` ±1 day) on the playhead · `M` map · `P` panorama ·
 in the panorama `W A S D` walk (1.4 m/s, `Shift` 25 m/s), drag to look.
 
+## Continuous integration
+
+[GitHub Actions CI](.github/workflows/ci.yml) runs on every push and pull request,
+and can also be started manually. Independent jobs use Python 3.12 and Node 22
+(matching the web container) to run Ruff, Python tests, TypeScript checks, Vitest,
+the production build, and HTTP smoke checks for the compute API and web preview.
+The frontend build is saved as the `web-dist` artifact for seven days; it does not
+include the separately generated scientific data and is not a standalone demo.
+
+CI does not download NASA datasets or SPICE kernels. Tests requiring generated data
+are skipped by the existing suites; synthetic-terrain and shared golden-vector
+checks still run. Full data validation and the data-backed stack smoke test remain
+local gates (`make validate`, `make smoke`). No deployment or secrets are required.
+
 ## How it works (short)
 
 - **Ephemerides**: SPICE (DE440 + lunar PA/ME frames) → Sun & Earth positions in MOON_ME,

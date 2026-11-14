@@ -30,6 +30,24 @@ function Lazy({ which }: { which: keyof typeof loaders }) {
   return C ? <C /> : <div class="loading">Loading {which}…</div>;
 }
 
+function ShareButton() {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setDone(true);
+      setTimeout(() => setDone(false), 1500);
+    } catch {
+      prompt('Copy this link', location.href);
+    }
+  };
+  return (
+    <button class="btn small" onClick={copy} title="Copy a link to exactly this site, time, interval and scenario set">
+      {done ? '✓ Copied' : '🔗 Share'}
+    </button>
+  );
+}
+
 export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -73,6 +91,7 @@ export function App() {
               Planner
             </button>
           </div>
+          <ShareButton />
           <button class="btn small" onClick={() => (warmupDone.value = false)} title="Replay the intro">
             ↺ Intro
           </button>

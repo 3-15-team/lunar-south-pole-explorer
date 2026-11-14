@@ -10,7 +10,7 @@ P0 — bootstrap
 - [x] T-001 docs skeleton + ADRs + kickoff copy (`docs/KICKOFF_PROMPT.md`)
 - [~] T-002 data downloads — tier 0 + 80 m ERR + 5 m sites done; **40 m DEM still downloading** (PGDA ≈ 0.3 MB/s) → z6 tiles missing until it lands (`make data-tiles` afterwards)
 - [x] T-003 Makefile + infra (compose, Dockerfiles, nginx, deploy hooks, doctor/verify/smoke/dist scripts)
-- [ ] T-004 Trek WMTS south-pole layers + CORS check (low value: we bake our own tiles; record result only)
+- [x] T-004 Trek WMTS checked (ADR-018): hillshade layer with CORS exists; not used (baked shadows)
 
 P1 — walking skeleton
 - [x] T-010 `libs/lunarcore` geo/tiles/ephemeris + golden vectors (Python agent)

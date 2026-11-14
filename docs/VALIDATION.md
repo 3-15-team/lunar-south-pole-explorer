@@ -4,6 +4,52 @@ How we check that our numbers are right. Sections marked *generated* are rewritt
 (`make validate`); text outside the markers is hand-written. Reference rasters are used **only** as a
 sanity check — every product shown in the app is computed by us.
 
+## Summary
+
+| check | result | how |
+|---|---|---|
+| Ephemeris table interpolation (30 min, float32, linear) | Sun ≤ 0.017″, Earth ≤ 0.121″ (direction) | `pipeline/jobs/ephemeris.py` vs direct SPICE at 64 288 mid-samples per body 2026–2036 |
+| Topocentric Sun/Earth az/el vs JPL Horizons | Sun ≤ 0.012″, Earth ≤ 0.115″ (max separation, 84 comparisons) | `pipeline/jobs/validate_horizons.py`, section below |
+| Long-term Sun / Earth visibility vs Mazarico et al. maps | bias −0.02 / +0.00, RMS 0.04 / 0.07, r 0.96 / 0.93 (random points) | `pipeline/jobs/validate_reference.py`, section below |
+| Geometry, tiles, horizon, disk, metrics, suitability | unit tests + golden vectors shared with the TypeScript twin | `pytest -q libs/lunarcore/tests pipeline/tests services/compute/tests` |
+
+The Earth interpolation figure is slightly above the "< 0.1″" stated in DATA.md §3: the Earth's direction in
+MOON_ME accelerates with the optical libration (a·Δt²/8 ≈ 0.08–0.12″ for Δt = 30 min). It is 3·10⁻⁵ of the
+Earth's angular radius and irrelevant for visibility.
+
+## Unit tests and golden vectors (hand-written)
+
+- **Frames/projection** (`test_geo.py`): projection round trip, trig-free unit vector = trigonometric one,
+  ENU orthonormal and right-handed, grid ray of azimuth A has azimuth A in the local ENU frame (1 m step,
+  < 1e-4°), grid North points away from the pole, scale factor k = 1 + q against chord distances.
+- **Tiles** (`test_tiles.py`): LDT1 round trip within scale/2, nodata, raw (un-gzipped) payloads, grid
+  math, clipmap level rule (ADR-102), bilinear exact for planes across tile edges, missing-tile fallback.
+- **Horizon** (`test_horizon.py`) on analytic terrain: flat sphere → dip −acos(R/(R+h)) (−0.0869° for 2 m,
+  −0.1943° for 10 m) and horizon distance √(2Rh); planar ramp uphill → atan(g) − dip, sideways → dip;
+  single Gaussian peak → dense reference maximum (and ≈ atan((h₀ − h_o − L²/2R)/L)); region-map path ==
+  site path at 64 azimuths within the 0.1° code step.
+- **Disk** (`test_disk.py`): straight edge at z = ±1, 0, symmetry f(z) + f(−z) = 1, monotonic; slice method
+  == straight edge for flat horizons (< 1e-9, requirement 1e-3); slice areas partition the disk.
+- **Metrics** (`test_metrics.py`): interval crossing a sunset, censored dark runs at both ends, inclusive
+  thresholds (f = 0.05 not dark, f_earth = θ visible), power proxies, events bisected to ≤ 60 s against a
+  1 s brute-force scan on a synthetic ephemeris, "time to next" consistent with the event list.
+- **Suitability** (`test_suitability.py`): utilities at 0, ½, 1, presets, hard slope constraint, footprint
+  statistics on a plane (slope = atan g, relief = g·(nb−1)·res), box filters vs brute force, Dirichlet weight
+  means, rank stability, non-maximum suppression.
+- **Golden vectors** (`libs/lunarcore/tests/golden/*.json`, spec in its README): geo (12), disk (17 + 15 slice
+  cases), horizon (7 analytic terrains), metrics (5), topo (30 = 6 sites × 5 epochs from the shipped tables).
+  The same files are asserted by pytest and by the web app's vitest suite.
+- **Service** (`services/compute/tests`): schema/validation errors, site metrics, heatmap PNG/JSON, cache
+  hits, robustness invariants (Σ rank stability = k), skipped when data are not built.
+
+## Known limitations (hand-written)
+
+- Straight rays in the projection plane instead of great circles (< 0.1° azimuth error within 150 km of the
+  pole); DEM levels are 2×2 means, so distant peaks are slightly smoothed (≤ ~0.01–0.02° on synthetic peaks).
+- The region heatmaps use 64-azimuth horizons, a 240 m analysis grid and the straight-edge disk formula
+  (map path); site metrics use 1440 azimuths and the slice method (CPU path).
+- No atmosphere, no refraction (airless body); no diffuse/scattered light; Earth radius = mean radius.
+
 <!-- BEGIN:horizons -->
 ## Ephemeris vs JPL Horizons (generated)
 

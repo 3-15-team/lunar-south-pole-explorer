@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { ComponentType } from 'preact';
 import { audience, mode, playing, progress, siteError, status, warmupDone } from '../state/store';
 import { HeatCalendar } from './HeatCalendar';
-import { EduPanel, MetricTiles, Verdict } from './Metrics';
+import { EduPanel, MetricRail, MetricTiles, Verdict } from './Metrics';
 import { ScenarioPanel, SitePanel } from './Panels';
 import { SkyPlot } from './SkyPlot';
 import { Timeline } from './Timeline';
@@ -48,7 +48,77 @@ function ShareButton() {
   );
 }
 
+type Side = 'left' | 'right';
+
+// Panel collapse is a per-browser layout preference, not shareable state, so it lives in
+// localStorage rather than the URL hash.
+function usePanelCollapsed(side: Side) {
+  const key = `lspe.panel.${side}.collapsed`;
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(key) === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, collapsed ? '1' : '0');
+    } catch {
+      /* storage unavailable: keep in-memory only */
+    }
+  }, [collapsed]);
+  const toggle = () => setCollapsed((v) => !v);
+  return [collapsed, toggle] as const;
+}
+
+// Panels stack vertically below this width (see styles.css), so collapsing makes no sense there.
+const WIDE_QUERY = '(min-width: 1101px)';
+function useWideLayout() {
+  const [wide, setWide] = useState(() => matchMedia(WIDE_QUERY).matches);
+  useEffect(() => {
+    const m = matchMedia(WIDE_QUERY);
+    const on = () => setWide(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return wide;
+}
+
+function SidebarIcon({ side }: { side: Side }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <rect x="1.75" y="2.75" width="14.5" height="12.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <rect x={side === 'left' ? 4 : 10.5} y="5" width="3.5" height="8" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function PanelToggle({ side, collapsed, onToggle }: { side: Side; collapsed: boolean; onToggle: () => void }) {
+  const name = side === 'left' ? 'sites & scenarios' : 'metrics';
+  const key = side === 'left' ? '[' : ']';
+  return (
+    <div class="panel-bar">
+      <button
+        class="panel-toggle"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${name} panel`}
+        title={`${collapsed ? 'Expand' : 'Collapse'} ${name} panel (${key})`}
+      >
+        <SidebarIcon side={side} />
+      </button>
+    </div>
+  );
+}
+
 export function App() {
+  const [leftCollapsedPref, toggleLeft] = usePanelCollapsed('left');
+  const [rightCollapsedPref, toggleRight] = usePanelCollapsed('right');
+  const wide = useWideLayout();
+  const leftCollapsed = wide && leftCollapsedPref;
+  const rightCollapsed = wide && rightCollapsedPref;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -58,6 +128,10 @@ export function App() {
         playing.value = !playing.value;
       } else if (e.key === 'm' && !e.metaKey && !e.ctrlKey) mode.value = 'map';
       else if (e.key === 'p' && !e.metaKey && !e.ctrlKey && mode.value !== 'pano') mode.value = 'pano';
+      else if ((e.key === '[' || e.key === ']') && !e.metaKey && !e.ctrlKey && matchMedia(WIDE_QUERY).matches) {
+        if (e.key === '[') toggleLeft();
+        else toggleRight();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -65,7 +139,7 @@ export function App() {
 
   const prog = progress.value;
   return (
-    <div class={`app aud-${audience.value}`}>
+    <div class={`app aud-${audience.value}${leftCollapsed ? ' l-collapsed' : ''}${rightCollapsed ? ' r-collapsed' : ''}`}>
       <header class="topbar">
         <div class="brand">
           <span class="logo" aria-hidden="true">◐</span>
@@ -97,9 +171,14 @@ export function App() {
           </button>
         </div>
       </header>
-      <aside class="left">
-        <SitePanel />
-        <ScenarioPanel />
+      <aside class={`left${leftCollapsed ? ' collapsed' : ''}`}>
+        {wide && <PanelToggle side="left" collapsed={leftCollapsed} onToggle={toggleLeft} />}
+        {!leftCollapsed && (
+          <>
+            <SitePanel />
+            <ScenarioPanel />
+          </>
+        )}
       </aside>
       <main class="center" aria-label={mode.value === 'map' ? 'Map of the lunar south pole' : 'First-person panorama'}>
         {mode.value === 'map' ? <Lazy which="map" /> : <Lazy which="pano" />}
@@ -109,11 +188,18 @@ export function App() {
           </div>
         )}
       </main>
-      <aside class="right">
-        <Verdict />
-        <SkyPlot />
-        <MetricTiles />
-        <EduPanel />
+      <aside class={`right${rightCollapsed ? ' collapsed' : ''}`}>
+        {wide && <PanelToggle side="right" collapsed={rightCollapsed} onToggle={toggleRight} />}
+        {rightCollapsed ? (
+          <MetricRail />
+        ) : (
+          <>
+            <Verdict />
+            <SkyPlot />
+            <MetricTiles />
+            <EduPanel />
+          </>
+        )}
       </aside>
       <footer class="bottom">
         <Timeline />

@@ -233,3 +233,11 @@ table.cmp thead th { text-align: right; font-size: 10px; }
 .vchip.good { color: var(--good); border-color: #1e5b46; }
 .vchip.fair { color: var(--warn); border-color: #6b4a1f; }
 .vchip.poor { color: var(--bad); border-color: #6b2a1f; }
+@media (max-width: 700px) {
+  .map-ui.top-left { max-width: 58%; }
+  .layer-switch label { font-size: 11px; padding: 1px 4px; }
+  .legend { font-size: 10px; }
+  .map-ui.top-right .seg, .map-ui.top-right .chk { display: none; }
+  .map-ui.bottom-left { max-width: 70%; }
+  .tl-controls .tl-field:nth-of-type(2), .tl-controls .tl-field:nth-of-type(3), .tl-quick { display: none; }
+}

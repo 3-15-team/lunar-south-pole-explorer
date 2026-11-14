@@ -37,6 +37,11 @@ make smoke        # check key endpoints
 make down
 ```
 
+Panorama anti-aliasing is a runtime setting (no rebuild): `make up PANO_AA_SIGMA=1.5` sets the Gaussian
+σ in CSS pixels (default **1.0**; **0.5** = the original renderer, no supersampling), and `?aa=…` in the
+page URL overrides it for one browser tab (e.g. `http://localhost:8642/?aa=0.75#m=pano`). Without the
+container (`make dev`, static hosting) the default 1.0 applies.
+
 Other useful targets (`make help` lists all):
 
 | target | what |

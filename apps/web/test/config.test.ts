@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { config, DEFAULT_CONFIG, INTERP_BC, loadConfig, mnKernel, parseInterp, parseMicro, parseReliefAA } from '../src/config';
+import { config, DEFAULT_CONFIG, INTERP_BC, loadConfig, mnKernel, parseInterp, parseMicro, parseOnOff, parseReliefAA } from '../src/config';
 
 const json = (body: unknown) =>
   ({ ok: true, headers: new Headers({ 'content-type': 'application/json' }), json: async () => body }) as unknown as Response;
@@ -24,6 +24,19 @@ describe('runtime config', () => {
     expect(parseReliefAA('x')).toBeUndefined();
   });
 
+  it('micro-relief toggle default: config.json, then ?micro=on|off; numbers stay amplitudes', async () => {
+    expect(parseOnOff('Off')).toBe(false);
+    expect(parseOnOff('yes')).toBe(true);
+    expect(parseOnOff('maybe')).toBeUndefined();
+    vi.stubGlobal('fetch', vi.fn(async () => json({ panoMicroDefault: 'off' })));
+    let c = await loadConfig('/config.json', '');
+    expect([c.panoMicroDefault, c.panoMicro]).toEqual([false, 1]);
+    c = await loadConfig('/config.json', '?micro=on');
+    expect([c.panoMicroDefault, c.panoMicro]).toEqual([true, 1]);
+    c = await loadConfig('/config.json', '?micro=0.5');
+    expect([c.panoMicroDefault, c.panoMicro]).toEqual([false, 0.5]);
+  });
+
   it('parseMicro clamps to [0, 3]', () => {
     expect(parseMicro('0.6')).toBe(0.6);
     expect(parseMicro(9)).toBe(3);
@@ -31,7 +44,7 @@ describe('runtime config', () => {
   });
 
   it('defaults: Catmull-Rom heights, one-pixel relief footprint, micro-relief on', () => {
-    expect(DEFAULT_CONFIG).toEqual({ panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1 });
+    expect(DEFAULT_CONFIG).toEqual({ panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1, panoMicroDefault: true });
   });
 
   it('config.json overrides the default, URL overrides config.json', async () => {

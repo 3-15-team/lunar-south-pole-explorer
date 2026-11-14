@@ -34,9 +34,21 @@ export interface RuntimeConfig {
    * self-shadows with the real Sun. 1 = as generated, 0 = off (procedural bump fallback).
    */
   panoMicro: number;
+  /**
+   * Initial state of the panorama "Micro-relief" toggle (the user can flip it in the UI).
+   * Env PANO_MICRO_DEFAULT=on|off (→ /config.json) or URL ?micro=on|off override this default.
+   */
+  panoMicroDefault: boolean;
 }
 
-export const DEFAULT_CONFIG: RuntimeConfig = { panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1 };
+export const DEFAULT_CONFIG: RuntimeConfig = {
+  panoTerrainInterp: 'catmull',
+  panoReliefAA: 1,
+  panoMicro: 1,
+  // ▼ THE default for the micro-relief toggle (ADR-118). Single source of truth: infra passes nothing
+  //   unless PANO_MICRO_DEFAULT is set explicitly.
+  panoMicroDefault: true,
+};
 
 export const config: RuntimeConfig = { ...DEFAULT_CONFIG };
 
@@ -59,6 +71,15 @@ export function parseMicro(v: unknown): number | undefined {
   return Number.isFinite(x) ? Math.min(3, Math.max(0, x)) : undefined;
 }
 
+/** Parse an on/off flag ('on'|'off'|'1'|'0'|'true'|'false'|'yes'|'no'); undefined otherwise. */
+export function parseOnOff(v: unknown): boolean | undefined {
+  if (typeof v === 'boolean') return v;
+  const s = typeof v === 'string' ? v.trim().toLowerCase() : typeof v === 'number' ? String(v) : '';
+  if (['on', '1', 'true', 'yes'].includes(s)) return true;
+  if (['off', '0', 'false', 'no'].includes(s)) return false;
+  return undefined;
+}
+
 /** Merge /config.json and the URL overrides (?interp=…, ?raa=…, ?micro=…) into `config`. Never throws. */
 export async function loadConfig(url: string, search = window.location.search, timeoutMs = 1500): Promise<RuntimeConfig> {
   try {
@@ -74,6 +95,8 @@ export async function loadConfig(url: string, search = window.location.search, t
       if (a !== undefined) config.panoReliefAA = a;
       const mc = parseMicro(j.panoMicro);
       if (mc !== undefined) config.panoMicro = mc;
+      const md = parseOnOff(j.panoMicroDefault);
+      if (md !== undefined) config.panoMicroDefault = md;
     }
   } catch {
     // no runtime config (vite dev, static hosting): keep defaults
@@ -82,7 +105,11 @@ export async function loadConfig(url: string, search = window.location.search, t
   if (q) config.panoTerrainInterp = q;
   const qa = parseReliefAA(new URLSearchParams(search).get('raa'));
   if (qa !== undefined) config.panoReliefAA = qa;
-  const qm = parseMicro(new URLSearchParams(search).get('micro'));
+  // ?micro=on|off → initial toggle state; ?micro=<number> → amplitude (0 = feature off)
+  const qmRaw = new URLSearchParams(search).get('micro');
+  const qOn = qmRaw !== null && /^[a-z]+$/i.test(qmRaw.trim()) ? parseOnOff(qmRaw) : undefined;
+  const qm = qOn === undefined ? parseMicro(qmRaw) : undefined;
+  if (qOn !== undefined) config.panoMicroDefault = qOn;
   if (qm !== undefined) config.panoMicro = qm;
   return config;
 }

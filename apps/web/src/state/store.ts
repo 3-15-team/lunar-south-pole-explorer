@@ -80,6 +80,8 @@ export const slipDays = signal(10);
 export const mode = signal<Mode>('map');
 export const audience = signal<Audience>('explorer');
 export const lighting = signal<'enhanced' | 'realistic'>('enhanced');
+/** Panorama statistical micro-relief on/off (UI toggle; initial value from config.panoMicroDefault). */
+export const microRelief = signal<boolean>(true);
 export const showPsr = signal(true);
 export const mapView = signal<{ x: number; y: number; res: number } | null>(null);
 

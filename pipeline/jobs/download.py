@@ -108,15 +108,15 @@ def fetch(url: str, dest: Path, expect_size: int | None, expect_sha: str | None,
                         print(f"  .. {dest.name} {done/1e6:8.1f} MB {pct} {rate:5.1f} MB/s", flush=True)
             got = part.stat().st_size
             if size is not None and got != size:
-                raise IOError(f"size {got} != expected {size}")
+                raise OSError(f"size {got} != expected {size}")
             digest = sha256_of(part)
             if expect_sha and digest != expect_sha:
                 part.unlink()
-                raise IOError("sha256 mismatch")
+                raise OSError("sha256 mismatch")
             part.replace(dest)
             print(f"  done {dest.relative_to(DATA)} {got/1e6:.1f} MB sha256={digest[:16]}...")
             return got, digest
-        except (urllib.error.URLError, IOError, TimeoutError) as e:
+        except (OSError, urllib.error.URLError, TimeoutError) as e:
             print(f"  attempt {attempt}/{retries} failed for {url}: {e}", file=sys.stderr)
             time.sleep(min(30, 2 ** attempt))
     raise SystemExit(f"FAILED: {url}")
@@ -142,19 +142,37 @@ def list_dir(url: str) -> list[str]:
 
 
 def expand(src: dict) -> list[dict]:
-    """Turn directory-style sources (5 m site DEMs) into concrete file entries."""
+    """Turn directory-style sources (5 m site DEMs) into concrete file entries.
+
+    Some PGDA site directories have no index page; their files are linked from the
+    parent listing, which is used as a fallback. Surfaces come first, error maps after.
+    """
     if src.get("kind") != "pgda-5m-sites":
         return [src]
+    root = src["url"].rstrip("/") + "/"
+    listings: dict[str, list[str]] = {}
+    root_links: list[str] | None = None
     out = []
-    for site in src["sites"]:
-        base = src["url"].rstrip("/") + f"/{site}/"
-        try:
-            links = list_dir(base)
-        except Exception as e:  # pragma: no cover - network
-            print(f"  cannot list {base}: {e}", file=sys.stderr)
-            continue
-        for suffix in ("_surf.tif", "_toterr.tif"):
-            names = sorted({l.split("/")[-1] for l in links if l.lower().endswith(suffix) and "clone" not in l.lower()})
+    for suffix in ("_surf.tif", "_toterr.tif"):
+        for site in src["sites"]:
+            base = root + f"{site}/"
+            if site not in listings:
+                try:
+                    listings[site] = list_dir(base)
+                except Exception as e:  # pragma: no cover - network
+                    print(f"  cannot list {base}: {e}", file=sys.stderr)
+                    listings[site] = []
+            names = sorted({ln.split("/")[-1] for ln in listings[site]
+                            if ln.lower().endswith(suffix) and "clone" not in ln.lower()})
+            if not names:
+                if root_links is None:
+                    try:
+                        root_links = list_dir(root)
+                    except Exception as e:  # pragma: no cover - network
+                        print(f"  cannot list {root}: {e}", file=sys.stderr)
+                        root_links = []
+                names = sorted({ln.split("/")[-1] for ln in root_links
+                                if f"/{site}/" in ln and ln.lower().endswith(suffix) and "clone" not in ln.lower()})
             if not names:
                 print(f"  {site}: no *{suffix} found", file=sys.stderr)
                 continue
@@ -168,6 +186,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tier", type=int, default=int(os.environ.get("DATA_TIER", "1")))
     ap.add_argument("--only", nargs="*", help="source ids (prefix match)")
+    ap.add_argument("--sites", nargs="*", help="only these 5 m sites (expanded entries of pgda-5m-sites)")
     ap.add_argument("--list", action="store_true")
     a = ap.parse_args()
     sources = json.loads(SOURCES.read_text())["sources"]
@@ -175,6 +194,8 @@ def main() -> None:
     man = load_manifest()
     for src in todo:
         for f in expand(src):
+            if a.sites and f.get("site") is not None and f["site"] not in a.sites:
+                continue
             if a.list:
                 print(f["id"], f["url"])
                 continue

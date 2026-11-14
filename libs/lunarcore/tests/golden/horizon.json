@@ -1,0 +1,256 @@
+{
+ "cases": [
+  {
+   "name": "flat-h2",
+   "dem": {
+    "type": "flat",
+    "h": 0.0
+   },
+   "observer": {
+    "x": 10000.0,
+    "y": 20000.0,
+    "hTerrain": 0.0,
+    "hObs": 2.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 0.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 90.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 180.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 270.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 63.434949,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    }
+   ]
+  },
+  {
+   "name": "flat-h10",
+   "dem": {
+    "type": "flat",
+    "h": 1500.0
+   },
+   "observer": {
+    "x": 10000.0,
+    "y": 20000.0,
+    "hTerrain": 1500.0,
+    "hObs": 10.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 0.0,
+     "elDeg": -0.194312,
+     "tolDeg": 0.002,
+     "distM": 5892.5
+    },
+    {
+     "azDeg": 123.0,
+     "elDeg": -0.194312,
+     "tolDeg": 0.002,
+     "distM": 5892.5
+    },
+    {
+     "azDeg": 250.0,
+     "elDeg": -0.194312,
+     "tolDeg": 0.002,
+     "distM": 5892.5
+    }
+   ]
+  },
+  {
+   "name": "flat-pole",
+   "dem": {
+    "type": "flat",
+    "h": 0.0
+   },
+   "observer": {
+    "x": 0.0,
+    "y": 0.0,
+    "hTerrain": 0.0,
+    "hObs": 2.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 0.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 45.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 180.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 315.0,
+     "elDeg": -0.086937,
+     "tolDeg": 0.002,
+     "distM": 2636.2
+    }
+   ]
+  },
+  {
+   "name": "ramp-0.1",
+   "dem": {
+    "type": "ramp",
+    "h0": -1000.0,
+    "gx": 0.1,
+    "gy": 0.0
+   },
+   "observer": {
+    "x": 10000.0,
+    "y": 20000.0,
+    "hTerrain": 0.0,
+    "hObs": 2.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 63.434949,
+     "elDeg": 5.623905,
+     "tolDeg": 0.01,
+     "distM": 2611.0
+    },
+    {
+     "azDeg": 153.434949,
+     "elDeg": -0.086937,
+     "tolDeg": 0.01,
+     "distM": 2636.2
+    },
+    {
+     "azDeg": 333.434949,
+     "elDeg": -0.086937,
+     "tolDeg": 0.01,
+     "distM": 2636.2
+    }
+   ]
+  },
+  {
+   "name": "ramp-diag-0.05",
+   "dem": {
+    "type": "ramp",
+    "h0": -1100.0,
+    "gx": 0.03,
+    "gy": 0.04
+   },
+   "observer": {
+    "x": 10000.0,
+    "y": 20000.0,
+    "hTerrain": 0.0,
+    "hObs": 2.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 10.304846,
+     "elDeg": 2.775599,
+     "tolDeg": 0.01,
+     "distM": 2630.2
+    }
+   ]
+  },
+  {
+   "name": "gauss-30km",
+   "dem": {
+    "type": "gauss",
+    "base": 0.0,
+    "h0": 2000.0,
+    "sigma": 3000.0,
+    "xc": 40000.0,
+    "yc": 20000.0
+   },
+   "observer": {
+    "x": 10000.0,
+    "y": 20000.0,
+    "hTerrain": 0.0,
+    "hObs": 2.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 63.434949,
+     "elDeg": 3.338248,
+     "tolDeg": 0.02,
+     "distM": 29658.0
+    },
+    {
+     "azDeg": 243.434949,
+     "elDeg": -0.086937,
+     "tolDeg": 0.02,
+     "distM": 2636.2
+    }
+   ]
+  },
+  {
+   "name": "gauss-far-massif",
+   "dem": {
+    "type": "gauss",
+    "base": 0.0,
+    "h0": 5000.0,
+    "sigma": 8000.0,
+    "xc": -60000.0,
+    "yc": 90000.0
+   },
+   "observer": {
+    "x": 10000.0,
+    "y": 20000.0,
+    "hTerrain": 0.0,
+    "hObs": 2.0
+   },
+   "finestRes": 20.0,
+   "alpha": 0.01,
+   "dmaxM": 300000.0,
+   "expect": [
+    {
+     "azDeg": 288.434949,
+     "elDeg": 1.277937,
+     "tolDeg": 0.02,
+     "distM": 97976.0
+    }
+   ]
+  }
+ ]
+}

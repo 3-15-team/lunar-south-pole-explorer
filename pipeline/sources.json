@@ -129,10 +129,11 @@
     "Site06",
     "Site07",
     "Site11",
-    "Site20v2",
+    "Site20",
     "Site23",
     "DM2",
-    "Haworth"
+    "Haworth",
+    "Shoemaker"
    ],
    "files": [
     "{site}_final_adj_5mpp_surf.tif",

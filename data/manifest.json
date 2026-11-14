@@ -1,5 +1,25 @@
 {
  "files": {
+  "ldem-80s-80m": {
+   "description": "LOLA DEM 80S-90S, 80 m/px, MOON_ME DE421 (Barker et al. 2023)",
+   "fetched_utc": "2026-11-14T10:15:34Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola/LDEM_80S_80MPP_ADJ.TIF",
+   "sha256": "82030dcbdd7c4bb0c7d858e9b4b293b9f2cda5a543ba31ec0f42784bd6beee5a",
+   "size": 189158392,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ.TIF"
+  },
+  "ldem-80s-80m-err": {
+   "description": "LOLA DEM height error (1-sigma), 80 m/px",
+   "fetched_utc": "2026-11-14T10:29:23Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola/LDEM_80S_80MPP_ADJ_ERR.TIF",
+   "sha256": "e89306914bb209143f61ba66d341703d75221339424b774c6a1eb3c6c370ffc6",
+   "size": 254808965,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ_ERR.TIF"
+  },
   "mazarico-earth-85s": {
    "description": "Mazarico et al. average Earth visibility 85S-90S, 60 m (REFERENCE ONLY, validation)",
    "fetched_utc": "2026-11-14T10:06:09Z",
@@ -109,6 +129,142 @@
    "sha256": "3bc10378025d62ded5805e2eebe4c016e461a8c6fe661f15367e4019f2b85827",
    "size": 12348,
    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ_1km2.SHX"
+  },
+  "site5m-DM2-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:20:33Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/DM2/DM2_final_adj_5mpp_surf.tif",
+   "sha256": "d88677c21633683061117db0a577f0510e0948fe9db315d13be28782407ff604",
+   "size": 64025607,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/DM2/DM2_final_adj_5mpp_surf.tif"
+  },
+  "site5m-DM2-toterr": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:25:01Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/DM2/DM2_final_adj_5mpp_toterr.tif",
+   "sha256": "7b4ad3b954dcf458f807c5637fa27fa2bae987c3e0bc369768868bca6483c418",
+   "size": 64025611,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/DM2/DM2_final_adj_5mpp_toterr.tif"
+  },
+  "site5m-Haworth-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:33:45Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Haworth/Haworth_final_adj_5mpp_surf.tif",
+   "sha256": "387fd6e99bca266f4982f7256c4c185921105313882b4c2eee5b5ff1ef75016b",
+   "size": 142123767,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Haworth/Haworth_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site01-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:24:20Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site01/Site01_final_adj_5mpp_surf.tif",
+   "sha256": "3ba7b97cb00a2bcf21189c3aeb535f65afc21207154ab9f0d43c5bdc1f7e747e",
+   "size": 40980810,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site04-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:27:30Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site04/Site04_final_adj_5mpp_surf.tif",
+   "sha256": "38ff70dbdf2f066c2cfa94a646c3a59d653ce7f6b4528b15fc1b43ee397ce758",
+   "size": 40980806,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site06-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:11:34Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site06/Site06_final_adj_5mpp_surf.tif",
+   "sha256": "cca17e8067601dd659b583f889204db6bce685bc30c60a9e62427a8bce36b03d",
+   "size": 64025603,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site06/Site06_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site06-toterr": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:16:15Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site06/Site06_final_adj_5mpp_toterr.tif",
+   "sha256": "997c7d2d7ae6a74a1d5c38411cf30a414b1a83474b6b3c3a7b1cb32ef675661e",
+   "size": 64025607,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site06/Site06_final_adj_5mpp_toterr.tif"
+  },
+  "site5m-Site07-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:29:52Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site07/Site07_final_adj_5mpp_surf.tif",
+   "sha256": "38aaee10bb4da4d63e7427aa1ca25c79bdbc649d212079a04990e135462091f8",
+   "size": 40980808,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site07/Site07_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site11-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:32:33Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site11/Site11_final_adj_5mpp_surf.tif",
+   "sha256": "58f3372c35bbd6baf38ffd5633c1c96b59bd89dbd252150581d12893a43136e5",
+   "size": 40980806,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site11/Site11_final_adj_5mpp_surf.tif"
+  },
+  "site5m-Site20-surf": {
+   "description": "LOLA 5 m/px site DEMs (Barker et al. 2021), resolved by listing each site directory",
+   "fetched_utc": "2026-11-14T10:34:56Z",
+   "job": "pipeline/jobs/download.py",
+   "license": "Public domain (NASA GSFC PGDA)",
+   "path": "raw/lola5/Site20/Site20_final_adj_5mpp_surf.tif",
+   "sha256": "e51451f3629ba7cd5cfc1b32c8c0ee3c5c454607488b00ea00cd06a9e301a892",
+   "size": 40980802,
+   "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site20/Site20_final_adj_5mpp_surf.tif"
+  }
+ },
+ "products": {
+  "dem": {
+   "bytes": 239121006,
+   "files": 2006,
+   "generated": "2026-11-14T10:24:16Z",
+   "job": "pipeline/jobs/dem_tiles.py",
+   "kind": "tree",
+   "path": "web/dem/SHA256SUMS",
+   "sha256": "5083df6f7f37a9e347328534cb518df3bd8d1762265ea1d9bae2931626e69ccb",
+   "size": 156712
+  },
+  "ephem": {
+   "bytes": 4631904,
+   "files": 12,
+   "generated": "2026-11-14T10:19:34Z",
+   "job": "pipeline/jobs/ephemeris.py",
+   "kind": "tree",
+   "path": "web/ephem/SHA256SUMS",
+   "sha256": "15ff2085db0ad8ba7ec9a8065888fdc9f1edf7cfde45191c8de6cb6881c9751d",
+   "size": 902
+  },
+  "psr": {
+   "generated": "2026-11-14T10:34:38Z",
+   "job": "pipeline/jobs/psr.py",
+   "path": "web/psr.geojson",
+   "sha256": "1cbd61f8c041b752f76a55b371b00dc1515fa380d555925f1501d12d3e5983ea",
+   "size": 3379379
+  },
+  "sites": {
+   "generated": "2026-11-14T10:35:40Z",
+   "job": "pipeline/jobs/sites.py",
+   "path": "web/sites.json",
+   "sha256": "9ba845c7deb56a2dcb74de1972f31f5fa2c94980946382fe1eda9efb0a0c5879",
+   "size": 13391
   }
  },
  "version": 1

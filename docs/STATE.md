@@ -37,6 +37,7 @@ P3 — wow layer
 P4 — finish
 - [x] T-040 docs: README, DEMO (real numbers), REFERENCES, SUBMISSION, VALIDATION, API
 - [x] T-041 `make verify` green; `make up` → http://localhost:8642 all smoke checks green
+- [~] T-043 configurable panorama anti-aliasing — merged as PR #3, then **reverted** (ADR-114)
 - [ ] T-042 demo video + English subtitles (team; script in `docs/DEMO.md`)
 
 ## NEXT ACTION

@@ -12,6 +12,7 @@ export default function PanoView() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [msg, setMsg] = useState('Preparing panorama…');
   const [heading, setHeading] = useState(0);
+  const [micro, setMicro] = useState(false);
   const sr = siteResult.value;
 
   useEffect(() => {
@@ -101,6 +102,7 @@ export default function PanoView() {
         scene.update(time.peek(), 0.035);
         scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
         setMsg('');
+        setMicro(scene.microLoaded);
         raf = requestAnimationFrame(loop);
       })
       .catch((e: Error) => setMsg('Panorama failed: ' + e.message));
@@ -157,7 +159,7 @@ export default function PanoView() {
         </button>
       </div>
       {msg && <div class="loading">{msg}</div>}
-      <div class="pano-help">Drag to look · WASD walk 1.4 m/s · Shift 25 m/s · LOLA 5–20 m terrain, procedural (synthetic) surface texture</div>
+      <div class="pano-help">Drag to look · WASD walk 1.4 m/s · Shift 25 m/s · LOLA 5–20 m terrain{micro ? ' + synthetic sub-DEM relief (statistical crater/boulder model, not imagery)' : ', procedural (synthetic) surface texture'}</div>
     </div>
   );
 }

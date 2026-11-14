@@ -49,4 +49,12 @@
 
 - Regolith micro-texture (map and panorama), the warm-up Moon surface, the star field and the
   Earth disc pattern are **procedural** (generated in shaders), labelled as such in the UI.
+- Panorama sub-DEM micro-relief (`data/web/micro`, `pipeline/jobs/micro_relief.py`) is **statistical**:
+  heights drawn from published crater/boulder size–frequency distributions (no imagery, no ML), shaded
+  live with the real Sun; labelled "synthetic sub-DEM relief" in the UI. Parameter sources:
+  - Pajola, M., et al. (2019). Abundance and size-frequency distributions of boulders in Linné crater's
+    ejecta (Moon). *Planetary and Space Science* 165, 99–109. https://arxiv.org/abs/1812.00590
+  - Bart, G. D., & Melosh, H. J. (2010). Distributions of boulders ejected from lunar craters. *Icarus* 209,
+    337–357. https://doi.org/10.1016/j.icarus.2010.05.023
+  - Small-crater equilibrium N(>D) ∝ D⁻² (Gault, 1970; Melosh, *Impact Cratering*, 1989).
 - No copyrighted images or music are used.

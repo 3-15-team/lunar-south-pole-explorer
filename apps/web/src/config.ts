@@ -28,9 +28,15 @@ export interface RuntimeConfig {
    * Only relief/shading is filtered; the image itself is not blurred.
    */
   panoReliefAA: number;
+  /**
+   * Statistical micro-relief amplitude in the panorama (data/web/micro, pipeline/jobs/micro_relief.py):
+   * heights below the DEM grid drawn from crater/boulder size distributions; drives normals and short
+   * self-shadows with the real Sun. 1 = as generated, 0 = off (procedural bump fallback).
+   */
+  panoMicro: number;
 }
 
-export const DEFAULT_CONFIG: RuntimeConfig = { panoTerrainInterp: 'catmull', panoReliefAA: 1 };
+export const DEFAULT_CONFIG: RuntimeConfig = { panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1 };
 
 export const config: RuntimeConfig = { ...DEFAULT_CONFIG };
 
@@ -46,7 +52,14 @@ export function parseReliefAA(v: unknown): number | undefined {
   return Number.isFinite(x) ? Math.min(8, Math.max(0, x)) : undefined;
 }
 
-/** Merge /config.json and the URL overrides (?interp=…, ?raa=…) into `config`. Never throws. */
+/** Parse the micro-relief amplitude; clamped to [0, 3]. */
+export function parseMicro(v: unknown): number | undefined {
+  if (v === null || v === undefined || v === '') return undefined;
+  const x = typeof v === 'number' ? v : parseFloat(String(v));
+  return Number.isFinite(x) ? Math.min(3, Math.max(0, x)) : undefined;
+}
+
+/** Merge /config.json and the URL overrides (?interp=…, ?raa=…, ?micro=…) into `config`. Never throws. */
 export async function loadConfig(url: string, search = window.location.search, timeoutMs = 1500): Promise<RuntimeConfig> {
   try {
     const ctl = new AbortController();
@@ -59,6 +72,8 @@ export async function loadConfig(url: string, search = window.location.search, t
       if (m) config.panoTerrainInterp = m;
       const a = parseReliefAA(j.panoReliefAA);
       if (a !== undefined) config.panoReliefAA = a;
+      const mc = parseMicro(j.panoMicro);
+      if (mc !== undefined) config.panoMicro = mc;
     }
   } catch {
     // no runtime config (vite dev, static hosting): keep defaults
@@ -67,6 +82,8 @@ export async function loadConfig(url: string, search = window.location.search, t
   if (q) config.panoTerrainInterp = q;
   const qa = parseReliefAA(new URLSearchParams(search).get('raa'));
   if (qa !== undefined) config.panoReliefAA = qa;
+  const qm = parseMicro(new URLSearchParams(search).get('micro'));
+  if (qm !== undefined) config.panoMicro = qm;
   return config;
 }
 

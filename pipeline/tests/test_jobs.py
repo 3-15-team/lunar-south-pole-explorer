@@ -108,3 +108,26 @@ def test_horizon_map_builder_resumable(tmp_path):
     dip = H.encode_map_elev(-math.degrees(math.sqrt(2 * 2.0 / 1737400.0)))
     inside = np.hypot(*np.meshgrid(xs, ys))[2:] <= a.extent
     assert np.all(out[2:][inside] == dip) and json.loads(pp.read_text())["done"] == blocks
+
+
+def test_micro_relief_tiles_are_periodic_deterministic_and_follow_the_sfd():
+    from pipeline.jobs import micro_relief as M
+
+    rng = np.random.default_rng(1)
+    d = M.truncated_pareto(rng, 200_000, 0.1, 10.0, 3.0)
+    assert d.min() >= 0.1 and d.max() <= 10.0
+    # cumulative N(>D) ∝ D^-3 → log-log slope ≈ -3 well inside the range
+    n1, n2 = (d > 0.2).sum(), (d > 0.4).sum()
+    assert math.log(n2 / n1) / math.log(2) == pytest.approx(-3.0, abs=0.1)
+
+    spec = dict(M.TILES["fine"], size=128)
+    g1, r1, _ = M.build_tile("t", spec)
+    g2, r2, _ = M.build_tile("t", spec)
+    assert np.array_equal(g1, g2) and np.array_equal(r1, r2)  # fixed seed
+    assert abs(g1.mean()) < 1e-9 and r1.min() >= 0.0
+    # seamless: the wrap-around step is no larger than typical interior steps
+    step = np.abs(np.diff(g1, axis=1)).mean()
+    assert np.abs(g1[:, 0] - g1[:, -1]).mean() < 3 * step
+    levels = M.mip_chain(np.stack([g1, r1], -1))
+    assert [lv.shape[0] for lv in levels] == [128, 64, 32, 16, 8, 4, 2, 1]
+    assert levels[-1][0, 0, 0] == pytest.approx(g1.mean(), abs=1e-6)

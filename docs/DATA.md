@@ -142,6 +142,14 @@ Static fallback for `services/compute` (`POST /api/v1/heatmap` returns the same 
   "candidates": [{"x", "y", "lat", "lon", "score", "rankStability"}], "stats": {...}}`
 - `<id>.score.bin` (optional): gzip of `float32[height][width]` raw scores (NaN = excluded).
 
+## 6b. Statistical micro-relief — `data/web/micro/` (display only)
+
+`index.json` (`version`, `method`, per tile: `file`, `size`, `meters`, `levels`, `params`, `stats`) and one
+`<tile>.bin` per tile: gzip of float16 LE, 2 channels (`ground`, `rocks`, metres) interleaved, mip levels
+(2×2 means, `size` … 1) concatenated. Tiles are periodic (seamless). `coarse`: 32 m / 1024² (3.1 cm px;
+craters 0.25–5 m, boulders 0.15–2 m); `fine`: 4 m / 1024² (3.9 mm px; craterlets 4–60 cm, pebbles 1–15 cm).
+Built by `pipeline/jobs/micro_relief.py` (deterministic seeds, ≈ 2 s). Never used by metrics.
+
 ## 7. Server-side work products — `data/work/` (never shipped to the browser)
 
 - `horizon_{res}m.npy` + `.json`: region horizon map, `uint8[ny][nx][naz]` —

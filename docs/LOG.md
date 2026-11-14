@@ -20,3 +20,4 @@
 - 2026-11-14 revert of PR #3 (panorama AA, ADR-114): user did not like the result; code back to the pre-merge state (direct render, MSAA only).
 - 2026-11-14 T-044 panorama relief AA (ADR-115): the low-Sun sparkle was the procedural micro-relief/DEM normals under-filtered at grazing view angles (isotropic px estimate); fixed with the derivative footprint + configurable cubic height interpolation. Sparkle RMS 1.76 → 0.73.
 - 2026-11-14 user screenshots: bricks/stair-stepped shadows persisted after ADR-115 → root cause: TS DEM fallback inserted coarse pixels nearest-neighbour into the fine grid (plateaus outside 5 m DEMs); fixed to mirror Python sample_clip + cubic upsampling for the panorama (ADR-116).
+- 2026-11-15 01:50 UTC T-046 statistical micro-relief (ADR-117): generator 2 s, 6.4 MB (2 tiles, float16 + mips); panorama normals + micro self-shadows from the real Sun; tuned craters to degraded d/D after first look was too rough.

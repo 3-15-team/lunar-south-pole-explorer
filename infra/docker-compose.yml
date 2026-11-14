@@ -13,6 +13,8 @@ services:
       PANO_TERRAIN_INTERP: "${PANO_TERRAIN_INTERP:-catmull}"
       # panorama relief anti-aliasing: pixel-footprint scale (1 = one pixel, 0 = legacy); override: ?raa=…
       PANO_RELIEF_AA: "${PANO_RELIEF_AA:-1}"
+      # panorama statistical micro-relief amplitude (0 = off → procedural texture); override: ?micro=…
+      PANO_MICRO: "${PANO_MICRO:-1}"
     volumes:
       - ./data/web:/usr/share/nginx/html/data:ro
     restart: unless-stopped

@@ -396,6 +396,16 @@
    "sha256": "522184e3f78908e469cd86ab20ba21e3e1a6ad5645365330132de88febf7b246",
    "size": 178062464
   },
+  "micro_relief": {
+   "bytes": 6465393,
+   "files": 2,
+   "generated": "2026-11-14T21:46:46Z",
+   "job": "pipeline/jobs/micro_relief.py",
+   "kind": "tree",
+   "path": "web/micro/SHA256SUMS",
+   "sha256": "ac1a130284f80ab6c900ab1f25284c59ed9abf234391cca13f8eb739b0730c1e",
+   "size": 152
+  },
   "psr": {
    "generated": "2026-11-14T10:34:38Z",
    "job": "pipeline/jobs/psr.py",

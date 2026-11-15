@@ -12,7 +12,7 @@
   },
   "ldem-80s-80m": {
    "description": "LOLA DEM 80S-90S, 80 m/px, MOON_ME DE421 (Barker et al. 2023)",
-   "fetched_utc": "2026-11-14T10:15:34Z",
+   "fetched_utc": "2026-11-15T07:55:33Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/lola/LDEM_80S_80MPP_ADJ.TIF",
@@ -32,7 +32,7 @@
   },
   "ldem-global-16": {
    "description": "LOLA global gridded DEM, 16 px/deg simple cylindrical, int16 LSB, height = DN*0.5 m above 1737.4 km; context Moon outside 80S on the map",
-   "fetched_utc": "2026-11-14T22:33:10Z",
+   "fetched_utc": "2026-11-15T07:57:00Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA PDS Geosciences Node, LRO LOLA GDR)",
    "path": "raw/lola_global/ldem_16.img",
@@ -42,7 +42,7 @@
   },
   "ldem-global-16-lbl": {
    "description": "PDS label of ldem_16.img",
-   "fetched_utc": "2026-11-14T22:33:11Z",
+   "fetched_utc": "2026-11-15T07:57:01Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA PDS Geosciences Node, LRO LOLA GDR)",
    "path": "raw/lola_global/ldem_16.lbl",
@@ -52,7 +52,7 @@
   },
   "mazarico-earth-85s": {
    "description": "Mazarico et al. average Earth visibility 85S-90S, 60 m (REFERENCE ONLY, validation)",
-   "fetched_utc": "2026-11-14T10:06:09Z",
+   "fetched_utc": "2026-11-15T07:55:32Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/illum/AVGVISIB_85S_060M_201608_EARTH.TIF",
@@ -62,7 +62,7 @@
   },
   "mazarico-sun-85s": {
    "description": "Mazarico et al. average Sun visibility 85S-90S, 60 m (REFERENCE ONLY, validation)",
-   "fetched_utc": "2026-11-14T10:03:42Z",
+   "fetched_utc": "2026-11-15T07:55:31Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/illum/AVGVISIB_85S_060M_201608.TIF",
@@ -72,7 +72,7 @@
   },
   "naif-de440s": {
    "description": "Planetary ephemeris DE440 short (1849-2150)",
-   "fetched_utc": "2026-11-14T09:59:30Z",
+   "fetched_utc": "2026-11-15T07:55:28Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA/JPL NAIF generic kernels)",
    "path": "raw/naif/de440s.bsp",
@@ -82,7 +82,7 @@
   },
   "naif-lsk": {
    "description": "Leap seconds kernel",
-   "fetched_utc": "2026-11-14T09:59:29Z",
+   "fetched_utc": "2026-11-15T07:55:26Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA/JPL NAIF generic kernels)",
    "path": "raw/naif/naif0012.tls",
@@ -92,7 +92,7 @@
   },
   "naif-moon-bpc": {
    "description": "Lunar PA orientation (DE440 libration)",
-   "fetched_utc": "2026-11-14T09:59:30Z",
+   "fetched_utc": "2026-11-15T07:55:28Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA/JPL NAIF generic kernels)",
    "path": "raw/naif/moon_pa_de440_200625.bpc",
@@ -102,7 +102,7 @@
   },
   "naif-moon-fk": {
    "description": "Lunar frames kernel; MOON_ME := MOON_ME_DE440_ME421 (aligned with DE421 ME used by LOLA products)",
-   "fetched_utc": "2026-11-14T09:59:30Z",
+   "fetched_utc": "2026-11-15T07:55:28Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA/JPL NAIF generic kernels)",
    "path": "raw/naif/moon_de440_250416.tf",
@@ -112,7 +112,7 @@
   },
   "naif-pck-text": {
    "description": "Body radii/orientation constants (Sun, Earth radii)",
-   "fetched_utc": "2026-11-14T09:59:29Z",
+   "fetched_utc": "2026-11-15T07:55:26Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA/JPL NAIF generic kernels)",
    "path": "raw/naif/pck00011.tpc",
@@ -122,7 +122,7 @@
   },
   "psr-1km2-dbf": {
    "description": "PSR shapefile attributes",
-   "fetched_utc": "2026-11-14T10:01:21Z",
+   "fetched_utc": "2026-11-15T07:55:30Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.DBF",
@@ -132,7 +132,7 @@
   },
   "psr-1km2-prj": {
    "description": "PSR shapefile projection",
-   "fetched_utc": "2026-11-14T10:01:23Z",
+   "fetched_utc": "2026-11-15T07:55:31Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.PRJ",
@@ -142,7 +142,7 @@
   },
   "psr-1km2-shp": {
    "description": "Permanently shadowed regions > 1 km2 (Barker et al. 2023), polygons",
-   "fetched_utc": "2026-11-14T10:01:13Z",
+   "fetched_utc": "2026-11-15T07:55:29Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.SHP",
@@ -152,7 +152,7 @@
   },
   "psr-1km2-shx": {
    "description": "PSR shapefile index",
-   "fetched_utc": "2026-11-14T10:01:15Z",
+   "fetched_utc": "2026-11-15T07:55:29Z",
    "job": "pipeline/jobs/download.py",
    "license": "Public domain (NASA GSFC PGDA)",
    "path": "raw/psr/LPSR_80S_20MPP_ADJ_1km2.SHX",
@@ -363,33 +363,33 @@
  },
  "products": {
   "dem": {
-   "bytes": 992963521,
-   "files": 8260,
-   "generated": "2026-11-14T10:58:45Z",
+   "bytes": 992969745,
+   "files": 8261,
+   "generated": "2026-11-15T07:57:16Z",
    "job": "pipeline/jobs/dem_tiles.py",
    "kind": "tree",
    "path": "web/dem/SHA256SUMS",
-   "sha256": "d39d17cd2c5abe33ea6fc98915f0b5f64980235c8dd3f8038623b09537861576",
-   "size": 648265
+   "sha256": "0d9b76bd313be04e3ae266bb20db5831c94b758dcb93ff9d7c578152088b4673",
+   "size": 648341
   },
   "ephem": {
    "bytes": 4631904,
    "files": 12,
-   "generated": "2026-11-14T10:19:34Z",
+   "generated": "2026-11-15T07:57:04Z",
    "job": "pipeline/jobs/ephemeris.py",
    "kind": "tree",
    "path": "web/ephem/SHA256SUMS",
-   "sha256": "15ff2085db0ad8ba7ec9a8065888fdc9f1edf7cfde45191c8de6cb6881c9751d",
+   "sha256": "40081e6eae788991e109fffc928d09c83243b8177e4b3c2def98b4c26ea05f6c",
    "size": 902
   },
   "err": {
    "bytes": 81588362,
    "files": 1242,
-   "generated": "2026-11-14T10:58:42Z",
+   "generated": "2026-11-15T07:57:13Z",
    "job": "pipeline/jobs/dem_tiles.py",
    "kind": "tree",
    "path": "web/err/SHA256SUMS",
-   "sha256": "eb4a224916537c2c5ae17645fa8fb4a62d897f8131d115cf3cf9f98fab3613e8",
+   "sha256": "562aa95653edba10bf9024508871c759bdc86e08ea3ee1d6eeb18a201b5b8a1f",
    "size": 95845
   },
   "features_240m": {
@@ -419,35 +419,35 @@
   "micro_relief": {
    "bytes": 6465393,
    "files": 2,
-   "generated": "2026-11-14T21:46:46Z",
+   "generated": "2026-11-15T07:57:22Z",
    "job": "pipeline/jobs/micro_relief.py",
    "kind": "tree",
    "path": "web/micro/SHA256SUMS",
-   "sha256": "ac1a130284f80ab6c900ab1f25284c59ed9abf234391cca13f8eb739b0730c1e",
+   "sha256": "a0779aa662ede40cb9365d0d9caf096dd35392e3726f9124ad061d6c15e1dbf3",
    "size": 152
   },
   "outer_dem": {
    "bytes": 6276453,
    "files": 1,
-   "generated": "2026-11-14T22:33:41Z",
+   "generated": "2026-11-15T07:57:24Z",
    "job": "pipeline/jobs/outer_dem.py",
    "kind": "tree",
    "path": "web/outer/SHA256SUMS",
-   "sha256": "6b602fac84b49e0dd49e500b46f2bea505536bfb5823c94c4ca63a5c47af605d",
+   "sha256": "e6204d988997c67648d3ead4bbed4ade3ff86cfed50586971896f65deb5994cf",
    "size": 74
   },
   "psr": {
-   "generated": "2026-11-14T10:34:38Z",
+   "generated": "2026-11-15T07:57:20Z",
    "job": "pipeline/jobs/psr.py",
    "path": "web/psr.geojson",
-   "sha256": "1cbd61f8c041b752f76a55b371b00dc1515fa380d555925f1501d12d3e5983ea",
+   "sha256": "67e1fcddc1b3a063cddc0d03ed9b58116bf48f723b9ee9707db19280c34468bd",
    "size": 3379379
   },
   "sites": {
-   "generated": "2026-11-14T10:58:53Z",
+   "generated": "2026-11-15T07:57:17Z",
    "job": "pipeline/jobs/sites.py",
    "path": "web/sites.json",
-   "sha256": "f775e3de7df40be589a03a7828aaea2b36ac4c21d2ee9e2abce2f2f916691f17",
+   "sha256": "8d76c028c44834cfa63b93809e1b3221499485625d96ed174923ea05e60c2428",
    "size": 16078
   }
  },

@@ -109,8 +109,7 @@ export function decodeState(hash: string): UrlState {
         if (!ref || a === undefined || b === undefined) return null;
         return { id: `u${k}`, site: ref, t0: a, t1: b } as Scenario;
       })
-      .filter((x): x is Scenario => !!x)
-      .slice(0, 4);
+      .filter((x): x is Scenario => !!x);
   }
   const m = p.get('m');
   if (m === 'map' || m === 'pano') out.mode = m;

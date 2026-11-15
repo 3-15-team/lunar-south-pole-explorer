@@ -6,7 +6,7 @@ import type { Ephemeris } from '../core/ephemeris';
 import type { Instant, Transition, IntervalMetrics } from '../core/metrics';
 import type { HorizonProfile } from '../core/horizon';
 import type { DemClient } from '../data/dem';
-import { resolveSite, type ResolvedSite, type Site, type SiteRef } from '../data/sites';
+import { refKey, resolveSite, type ResolvedSite, type Site, type SiteRef } from '../data/sites';
 import type { PlotSeries } from '../workers/protocol';
 import type { SiteClient } from '../workers/siteClient';
 
@@ -17,8 +17,6 @@ export type Preset = 'lander' | 'base';
 
 export const HOUR = 3600e3;
 export const DAY = 24 * HOUR;
-export const MAX_SCENARIOS = 4;
-export const SCENARIO_COLORS = ['#E69F00', '#56B4E9', '#CC79A7', '#009E73']; // Okabe–Ito
 
 export interface Scenario {
   id: string;
@@ -85,6 +83,9 @@ export const slopeLimit = signal(10);
 export const scenarios = signal<Scenario[]>([]);
 export const slipDays = signal(10);
 export const mode = signal<Mode>('map');
+/** Panorama: request to turn the camera to the Sun / Earth (`n` re-triggers the same target). */
+export const panoLookAt = signal<{ target: 'sun' | 'earth'; n: number } | null>(null);
+export const requestPanoLook = (target: 'sun' | 'earth') => (panoLookAt.value = { target, n: (panoLookAt.peek()?.n ?? 0) + 1 });
 export const audience = signal<Audience>('explorer');
 export const lighting = signal<'enhanced' | 'realistic'>('enhanced');
 /** Panorama statistical micro-relief on/off (UI toggle; initial value from config.panoMicroDefault). */
@@ -118,14 +119,28 @@ export function setInterval_(t0: number, t1: number): void {
   interval.value = [a, Math.max(b, a + HOUR)];
 }
 
+/**
+ * Scenario card the left panel scrolls to: the one just pinned, or (flash) the existing copy when a
+ * duplicate is pinned. `n` changes on every request so the same card can be revealed again.
+ */
+export const revealScenario = signal<{ id: string; n: number; flash: boolean } | null>(null);
+const reveal = (id: string, flash: boolean) => (revealScenario.value = { id, n: (revealScenario.peek()?.n ?? 0) + 1, flash });
+
 export function pinScenario(): void {
   const s = site.value;
   if (!s) return;
   const list = scenarios.value;
-  if (list.length >= MAX_SCENARIOS) return;
   const [t0, t1] = interval.value;
+  // same site + same interval already pinned: don't add a copy, point at the existing card
+  const key = refKey(s.ref);
+  const dup = list.find((c) => refKey(c.site) === key && c.t0 === t0 && c.t1 === t1);
+  if (dup) {
+    reveal(dup.id, true);
+    return;
+  }
   const id = Math.random().toString(36).slice(2, 8);
   scenarios.value = [...list, { id, site: s.ref, t0, t1, label: s.name }];
+  reveal(id, false);
 }
 
 export function removeScenario(id: string): void {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { makeSiteFrame } from '../core/ephemeris';
 import { profileAt } from '../core/horizon';
 import { evalAt, HOUR } from '../core/metrics';
-import { instant, metricsState, services, siteResult, time } from '../state/store';
+import { instant, interval, metricsState, services, siteResult, time } from '../state/store';
 import { fmtDeg, fmtDistance, fmtPct } from './format';
 import { skyElRange } from './skyRange';
 
@@ -52,13 +52,17 @@ export function SkyPlot() {
   const m = m0 && sr && m0.key === sr.key ? m0 : null;
   const n = m ? m.plot.t.length : 0;
   const inside = !!m && n > 0 && t >= m.plot.t[0] && t <= m.plot.t[n - 1];
+  // Metrics for a just-changed site are still in flight (they lag the horizon by ~1 s) while the
+  // playhead is inside the interval: wait for the real tracks instead of flashing the fallback.
+  const [i0, i1] = interval.value;
+  const pending = !!sr && !m && t >= i0 && t <= i1;
   // Playhead outside the interval (or interval tracks not ready): the discs would float off the
   // drawn curves, so recompute the tracks locally around the playhead (main thread, ~290 evals,
   // refreshed per hour of playhead motion).
   const bucket = Math.round(t / HOUR);
   const local = useMemo<Tracks | null>(() => {
     const eph = services.eph;
-    if (!sr || inside || !eph) return null;
+    if (!sr || inside || pending || !eph) return null;
     const a = eph.clamp(bucket * HOUR - LOCAL_SPAN);
     const b = eph.clamp(bucket * HOUR + LOCAL_SPAN);
     if (!eph.isLoaded(a) || !eph.isLoaded(b + eph.stepMs)) {
@@ -81,10 +85,12 @@ export function SkyPlot() {
       tr.fEarth[i] = x.fEarth;
     }
     return tr;
-  }, [sr, inside, bucket, ephTick]);
+  }, [sr, inside, pending, bucket, ephTick]);
 
   // y-range from content: nothing drawn may be clipped (horizon, tracks, current discs)
-  const trackEls = [m?.plot.sunEl, m?.plot.earthEl, local?.sunEl, local?.earthEl, sr?.profile.elevEarth].filter((a): a is Float32Array => !!a);
+  // while pending, size the axis from the previous site's tracks (not drawn) so it doesn't jump
+  const rangeM = m ?? (pending ? m0 : null);
+  const trackEls = [rangeM?.plot.sunEl, rangeM?.plot.earthEl, local?.sunEl, local?.earthEl, sr?.profile.elevEarth].filter((a): a is Float32Array => !!a);
   const [lo, hi] = skyElRange(sr ? sr.profile.elev : null, trackEls, now ? [[now.sunEl, now.sunR], [now.earthEl, now.earthR]] : []);
 
   useEffect(() => {

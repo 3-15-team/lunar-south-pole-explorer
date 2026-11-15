@@ -18,6 +18,19 @@ const QUICK = [
   { label: '1 yr', ms: 365.25 * DAY },
 ];
 
+/** Double-click anywhere in a Time / From / To block opens that field's native date picker. */
+function openPicker(e: MouseEvent) {
+  showPicker((e.currentTarget as HTMLElement).querySelector('input'));
+}
+
+function showPicker(input: HTMLInputElement | null | undefined) {
+  try {
+    input?.showPicker();
+  } catch {
+    input?.focus(); // no showPicker (old browser) or not allowed: at least focus the field
+  }
+}
+
 function clampEph(t: number): number {
   const r = ephRange.value;
   return r ? Math.min(Math.max(t, r[0]), r[1] - DAY) : t;
@@ -27,6 +40,13 @@ export function Timeline() {
   const trackRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frozen = useRef<[number, number] | null>(null);
+  const fromRef = useRef<HTMLInputElement>(null);
+  const toRef = useRef<HTMLInputElement>(null);
+  // double-click on an interval handle opens the From / To picker (not the track's "move playhead")
+  const handlePicker = (input: { current: HTMLInputElement | null }) => (e: MouseEvent) => {
+    e.stopPropagation();
+    showPicker(input.current);
+  };
   const [t0, t1] = interval.value;
   const t = time.value;
   const span = t1 - t0;
@@ -186,17 +206,17 @@ export function Timeline() {
             <option value={s.v}>{s.label}</option>
           ))}
         </select>
-        <label class="tl-field">
+        <label class="tl-field" onDblClick={openPicker}>
           <span>Time (UTC)</span>
           <input type="datetime-local" value={toInputValue(t)} onChange={(e) => (time.value = clampEph(fromInputValue((e.target as HTMLInputElement).value)))} />
         </label>
-        <label class="tl-field">
+        <label class="tl-field" onDblClick={openPicker}>
           <span>From</span>
-          <input type="datetime-local" value={toInputValue(t0)} onChange={(e) => setInterval_(clampEph(fromInputValue((e.target as HTMLInputElement).value)), t1)} />
+          <input ref={fromRef} type="datetime-local" value={toInputValue(t0)} onChange={(e) => setInterval_(clampEph(fromInputValue((e.target as HTMLInputElement).value)), t1)} />
         </label>
-        <label class="tl-field">
+        <label class="tl-field" onDblClick={openPicker}>
           <span>To</span>
-          <input type="datetime-local" value={toInputValue(t1)} onChange={(e) => setInterval_(t0, clampEph(fromInputValue((e.target as HTMLInputElement).value)))} />
+          <input ref={toRef} type="datetime-local" value={toInputValue(t1)} onChange={(e) => setInterval_(t0, clampEph(fromInputValue((e.target as HTMLInputElement).value)))} />
         </label>
         <div class="tl-quick" role="group" aria-label="Interval length">
           {QUICK.map((q) => (
@@ -207,11 +227,18 @@ export function Timeline() {
         </div>
         <span class="tl-span muted">{fmtDuration(span)}</span>
       </div>
-      <div class="tl-track" ref={trackRef} onPointerDown={drag('time')}>
+      <div
+        class="tl-track"
+        ref={trackRef}
+        onPointerDown={drag('time')}
+        // double-click anywhere (also on the interval band, where a single press drags) moves the playhead there;
+        // the handles stop it and open the From / To picker instead
+        onDblClick={(e) => (time.value = tAt(e.clientX))}
+      >
         <canvas ref={canvasRef} class="tl-canvas" aria-hidden="true" />
         <div class="tl-range" style={{ left: pct(t0), width: `calc(${pct(t1)} - ${pct(t0)})` }} onPointerDown={drag('range')} title="Drag to move the interval">
-          <div class="tl-handle start" role="slider" tabIndex={0} aria-label="Interval start" aria-valuetext={fmtDate(t0)} onPointerDown={drag('start')} onKeyDown={keyHandle('start')} />
-          <div class="tl-handle end" role="slider" tabIndex={0} aria-label="Interval end" aria-valuetext={fmtDate(t1)} onPointerDown={drag('end')} onKeyDown={keyHandle('end')} />
+          <div class="tl-handle start" role="slider" tabIndex={0} aria-label="Interval start" aria-valuetext={fmtDate(t0)} onPointerDown={drag('start')} onKeyDown={keyHandle('start')} onDblClick={handlePicker(fromRef)} />
+          <div class="tl-handle end" role="slider" tabIndex={0} aria-label="Interval end" aria-valuetext={fmtDate(t1)} onPointerDown={drag('end')} onKeyDown={keyHandle('end')} onDblClick={handlePicker(toRef)} />
         </div>
         <div class="tl-playhead" style={{ left: pct(t) }} role="slider" tabIndex={0} aria-label="Current time" aria-valuetext={fmtDate(t)} onPointerDown={drag('time')} onKeyDown={keyTime}>
           <span class="tl-playhead-label">{fmtDate(t)}</span>

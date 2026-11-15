@@ -19,7 +19,7 @@ import { diskFraction, edgeFraction } from '../src/core/disk';
 import { computeHorizon, profileAt, type DemSampler } from '../src/core/horizon';
 import { metricsFromFractions } from '../src/core/metrics';
 import { decodeState, encodeState } from '../src/state/url';
-import { score, PRESETS, rankStability, type Candidate } from '../src/core/suitability';
+import { intervalScore, score, PRESETS, rankStability, type Candidate } from '../src/core/suitability';
 
 describe('geo', () => {
   it('projection round-trips and puts lon 0 at +y', () => {
@@ -199,11 +199,32 @@ describe('url state', () => {
     expect(d.slipDays).toBe(-7);
     expect(d.view).toEqual(s.view);
   });
+  it('keeps every pinned scenario (no 4-scenario cap)', () => {
+    const scenarios = Array.from({ length: 6 }, (_, k) => ({
+      id: `s${k}`,
+      site: { kind: 'catalog' as const, id: `site0${k + 1}` },
+      t0: Date.UTC(2027, 0, 1 + k),
+      t1: Date.UTC(2027, 0, 15 + k),
+    }));
+    const d = decodeState(encodeState({ scenarios }));
+    expect(d.scenarios?.map((c) => c.site)).toEqual(scenarios.map((c) => c.site));
+  });
 });
 
 describe('suitability', () => {
   const pr = PRESETS.lander;
   const f = { slopeMax: 4, slopeMean: 2, relief: 1, illum: 0.8, dark: 20, earth: 0.7 };
+  it('interval score (card colour) = the score with only sunlight / night / Earth terms', () => {
+    // perfect terrain: the full score reduces to the interval terms reweighted by their share
+    const flat = { ...f, slopeMax: 0, slopeMean: 0, relief: 0 };
+    const w = pr.weights;
+    const iw = w.illum + w.dark + w.earth;
+    const sw = iw + w.slope + w.relief;
+    const full = score(flat, w, 50, 10, pr.darkRef);
+    expect(intervalScore(f, w, pr.darkRef)).toBeCloseTo((full * sw - (w.slope + w.relief)) / iw, 9);
+    expect(intervalScore({ illum: 1, dark: 0, earth: 1 }, w, pr.darkRef)).toBe(1);
+    expect(intervalScore({ illum: 0, dark: 1e6, earth: 0 }, w, pr.darkRef)).toBe(0);
+  });
   it('hard slope constraint excludes', () => {
     expect(score({ ...f, slopeMax: 12 }, pr.weights, 50, 10, pr.darkRef)).toBe(-1);
     const s = score(f, pr.weights, 50, 10, pr.darkRef);

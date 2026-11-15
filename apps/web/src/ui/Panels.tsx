@@ -1,20 +1,16 @@
 // Left column: site catalogue + custom coordinates, pinned scenario cards with
 // "what if it slips" deltas.
-import type { Signal } from '@preact/signals';
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatLatLon, parseLatLon } from '../core/geo';
 import { KIND_LABEL, resolveSite, type Site, type SiteKind } from '../data/sites';
 import {
-  MAX_SCENARIOS,
-  SCENARIO_COLORS,
   audience,
   catalog,
   catalogFallback,
-  hAnt,
-  hObs,
   interval,
   pinScenario,
   removeScenario,
+  revealScenario,
   scenarioResults,
   scenarios,
   siteRef,
@@ -23,55 +19,33 @@ import {
   time,
   type MetricsState,
 } from '../state/store';
+import { scenarioSuit } from '../state/scenarioSuit';
 import { delta, fmtDate, fmtHours, fmtPct } from './format';
-import { fmtHeight, H_TICKS, heightToPos, POS_MAX, POS_MIN, POS_STEP, posToHeight, tickPos } from './heightScale';
-
-/**
- * Height above the local surface, 1–100 m, log scale (ui/heightScale.ts). The readout follows the
- * drag; the horizon is recomputed once on release.
- */
-function HeightSlider(props: { value: Signal<number>; label: string; title: string; id: string }) {
-  const [drag, setDrag] = useState<number | null>(null);
-  const h = drag ?? props.value.value;
-  const pos = (e: Event) => posToHeight(+(e.target as HTMLInputElement).value);
-  return (
-    <label class="slider-row" title={props.title}>
-      <span>{props.label}</span>
-      <input
-        type="range"
-        min={POS_MIN}
-        max={POS_MAX}
-        step={POS_STEP}
-        list={`${props.id}-ticks`}
-        value={heightToPos(h)}
-        aria-valuetext={fmtHeight(h)}
-        onInput={(e) => setDrag(pos(e))}
-        onChange={(e) => {
-          props.value.value = pos(e);
-          setDrag(null);
-        }}
-      />
-      <datalist id={`${props.id}-ticks`}>
-        {H_TICKS.map((t) => (
-          <option key={t} value={tickPos(t)} label={`${t}`} />
-        ))}
-      </datalist>
-      <output>{fmtHeight(h)}</output>
-      <span class="scale-labels" aria-hidden="true">
-        {[1, 10, 100].map((t) => (
-          <span key={t} style={{ '--p': (heightToPos(t) - POS_MIN) / (POS_MAX - POS_MIN) }}>
-            {t === 100 ? '100 m' : t}
-          </span>
-        ))}
-      </span>
-    </label>
-  );
-}
 
 const ORDER: SiteKind[] = ['pgda-5m', 'artemis', 'clps', 'mission', 'reference'];
 
+// Collapsed catalogue groups: a per-browser layout preference (localStorage, not the URL).
+const GROUPS_KEY = 'lspe.sites.collapsed';
+function loadCollapsed(): SiteKind[] {
+  try {
+    return JSON.parse(localStorage.getItem(GROUPS_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
 export function SitePanel() {
   const [q, setQ] = useState('');
+  const [collapsed, setCollapsed] = useState<SiteKind[]>(loadCollapsed);
+  const toggleGroup = (k: SiteKind) => {
+    const next = collapsed.includes(k) ? collapsed.filter((c) => c !== k) : [...collapsed, k];
+    setCollapsed(next);
+    try {
+      localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+    } catch {
+      /* storage unavailable: keep in-memory only */
+    }
+  };
   const [coord, setCoord] = useState('');
   const [coordErr, setCoordErr] = useState('');
   const cur = site.value;
@@ -92,10 +66,17 @@ export function SitePanel() {
       {catalogFallback.value && <div class="notice small">Catalogue file missing — showing built-in reference points.</div>}
       <input class="search" type="search" placeholder="Search sites…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Search sites" />
       <div class="site-list" role="listbox" aria-label="Site catalogue">
-        {groups.map((g) => (
+        {groups.map((g) => {
+          // a search shows every match, so collapsing applies only to the unfiltered list
+          const shut = !q && collapsed.includes(g.k);
+          return (
           <div class="site-group">
-            <div class="site-group-title">{KIND_LABEL[g.k]}</div>
-            {g.items.map((s) => {
+            <button type="button" class="site-group-title" aria-expanded={!shut} onClick={() => toggleGroup(g.k)}>
+              <span class="disclosure" aria-hidden="true">{shut ? '▸' : '▾'}</span>
+              {KIND_LABEL[g.k]}
+              {shut && <span class="site-group-count">{g.items.length}</span>}
+            </button>
+            {!shut && g.items.map((s) => {
               const active = cur?.id === s.id;
               const out = s.inCoverage === false;
               return (
@@ -111,7 +92,8 @@ export function SitePanel() {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </div>
       <form class="coord-form" onSubmit={submit}>
         <label for="coord">Custom coordinates</label>
@@ -124,18 +106,6 @@ export function SitePanel() {
         {coordErr && <div class="field-error">{coordErr}</div>}
         <div class="hint">…or click anywhere on the map.</div>
       </form>
-      <HeightSlider
-        value={hObs}
-        id="height"
-        label="Height above surface"
-        title="Height of the camera / solar array above the local surface at the site (not above a datum). Drives the Sun metrics, the panorama eye and the map layers. Logarithmic: fine steps up to 10 m, coarser up to 100 m."
-      />
-      <HeightSlider
-        value={hAnt}
-        id="antenna"
-        label="Antenna height"
-        title="Height of the Earth-link antenna above the local surface. Drives Earth visibility (DTE), Earthrise/Earthset and comms gaps at the site. The map layers keep the observer height."
-      />
     </section>
   );
 }
@@ -170,14 +140,38 @@ export function ScenarioPanel() {
   const res = scenarioResults.value;
   const slip = slipDays.value;
   const planner = audience.value === 'planner';
+  const shown = revealScenario.value;
+  const suits = scenarioSuit.value;
+  const cardsRef = useRef<HTMLDivElement>(null);
+  // scroll the left panel to the card just pinned (or to the existing copy of a duplicate). Cards
+  // change height while their metrics load (pinning recomputes every scenario), which moves the
+  // target, so keep it in view while the list resizes — for a short while only, so a manual
+  // scroll afterwards isn't fought.
+  useEffect(() => {
+    const list = cardsRef.current;
+    if (!shown || !list) return;
+    const show = () => list.querySelector(`[data-id="${shown.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    show();
+    const ro = new ResizeObserver(show);
+    ro.observe(list);
+    for (const c of list.children) ro.observe(c);
+    const stop = setTimeout(() => ro.disconnect(), 3000);
+    return () => {
+      clearTimeout(stop);
+      ro.disconnect();
+    };
+  }, [shown?.n]);
   return (
     <section class="panel scenarios" aria-label="Scenario comparison">
-      <div class="panel-title">
-        Compare scenarios <span class="muted">({list.length}/{MAX_SCENARIOS})</span>
+      {/* sticks to the top of the left panel while scrolling a long card list, so Pin stays reachable */}
+      <div class="scen-head">
+        <div class="panel-title">
+          Compare scenarios <span class="muted">({list.length})</span>
+        </div>
+        <button class="btn primary wide" onClick={pinScenario} disabled={!site.value}>
+          + Pin current site & interval
+        </button>
       </div>
-      <button class="btn primary wide" onClick={pinScenario} disabled={list.length >= MAX_SCENARIOS || !site.value}>
-        + Pin current site & interval
-      </button>
       <label class="slider-row slip" title="Shift every pinned scenario's interval and compare">
         <span>What if it slips?</span>
         <input type="range" min={-30} max={30} step={1} value={slip} onInput={(e) => (slipDays.value = +(e.target as HTMLInputElement).value)} aria-label="Slip in days" />
@@ -186,15 +180,24 @@ export function ScenarioPanel() {
           {slip} d
         </output>
       </label>
-      {list.length === 0 && <div class="hint">Pin up to four site/date scenarios to compare them side by side, then drag the slip slider.</div>}
-      <div class="cards">
-        {list.map((sc, i) => {
+      {list.length === 0 && <div class="hint">Pin site/date scenarios to compare them side by side, then drag the slip slider.</div>}
+      <div class="cards" ref={cardsRef}>
+        {list.map((sc) => {
           const r = res[sc.id] ?? {};
           const s = resolveSite(sc.site, catalog.value);
           const a = r.base?.metrics;
           const b = r.slipped?.metrics;
+          const flashing = !!shown?.flash && shown.id === sc.id;
+          const suit = suits[sc.id];
           return (
-            <article class="card" style={{ '--c': SCENARIO_COLORS[i % 4] } as Record<string, string>}>
+            <article
+              // a new key on each repeat restarts the flash animation
+              key={flashing ? `${sc.id}:${shown.n}` : sc.id}
+              data-id={sc.id}
+              class={`card${flashing ? ' flash' : ''}`}
+              // chip + stripe colour = the point's Suitability score on the map's cividis ramp
+              style={{ '--c': suit?.color ?? 'var(--line)' } as Record<string, string>}
+            >
               <header>
                 <button
                   class="card-title"
@@ -205,7 +208,7 @@ export function ScenarioPanel() {
                   }}
                   title="Show this scenario"
                 >
-                  <span class="chip" />
+                  <span class="chip" title={suit?.label} aria-label={suit?.label} />
                   {s?.name ?? sc.label ?? 'Scenario'}
                 </button>
                 <button class="icon" aria-label="Remove scenario" onClick={() => removeScenario(sc.id)}>

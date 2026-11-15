@@ -1,11 +1,14 @@
 // Panorama mode (lazy). Uses the shared store: site, time, observer height, lighting.
 import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, services, siteResult, time } from '../state/store';
+import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, panoLookAt, services, siteRef, siteResult, time } from '../state/store';
+import { customFromXY, refKey } from '../data/sites';
 import { config } from '../config';
+import { formatLatLon } from '../core/geo';
 import { countdownMs } from '../state/countdown';
-import { fmtCountdown, fmtDate, fmtDeg, fmtPct } from '../ui/format';
-import { PanoScene } from './scene';
+import { fmtCountdown, fmtDate, fmtDeg, fmtDistance, fmtPct } from '../ui/format';
+import { HeightControl } from './HeightControl';
+import { FAST_SPEED, PanoScene, WALK_SPEED } from './scene';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
@@ -16,9 +19,37 @@ export default function PanoView() {
   const [heading, setHeading] = useState(0);
   const [micro, setMicro] = useState(false);
   const [microMissing, setMicroMissing] = useState(false);
+  const [here, setHere] = useState('');
+  const [hover, setHover] = useState('');
   const sr = siteResult.value;
+  const metricsKey = metricsState.value?.key;
+  // A double-click selects the target as the site right away, so its horizon and metrics are
+  // computed during the flight. The scene itself (sceneSr) is rebuilt around the new site only
+  // once the flight is over and the metrics are in: the rebuild is heavy main-thread work and
+  // would otherwise interrupt the animation and hold back the right panel. Site changes from
+  // elsewhere (list, map, URL) still rebuild at once.
+  const [sceneSr, setSceneSr] = useState(sr);
+  const [flying, setFlying] = useState(false);
+  const ownMoves = useRef(new Set<string>()); // refKeys of sites selected by our double-clicks
+  const adoptingOwn = useRef(false);
+  // viewer pose carried across an own-move rebuild, in grid coordinates (frame-independent)
+  const carry = useRef<{ heading: [number, number]; pitch: number; grid: [number, number] } | null>(null);
+  // last handled "look at" request: a scene rebuild must not replay an old one
+  const lookSeen = useRef(panoLookAt.peek()?.n ?? 0);
 
   useEffect(() => {
+    if (sr?.key === sceneSr?.key) return;
+    const own = !!sr && ownMoves.current.has(refKey(sr.site.ref));
+    if (own && (flying || metricsKey !== sr.key)) return; // wait: flight still running / metrics pending
+    // same site, new key = height changed (e.g. the height control): rebuild now but keep the pose
+    const sameSite = !!sr && !!sceneSr && refKey(sr.site.ref) === refKey(sceneSr.site.ref);
+    adoptingOwn.current = own || sameSite;
+    if (own && refKey(sr.site.ref) === refKey(siteRef.peek())) ownMoves.current.clear();
+    setSceneSr(sr);
+  }, [sr, sceneSr, flying, metricsKey]);
+
+  useEffect(() => {
+    const sr = sceneSr;
     const dem = services.dem;
     const eph = services.eph;
     if (!sr || !dem || !eph || !canvas.current || !wrap.current) {
@@ -26,6 +57,7 @@ export default function PanoView() {
       return;
     }
     let disposed = false;
+    let ready = false; // scene built and showing (its pose is meaningful)
     let raf = 0;
     const p = sr.profile;
     const scene = new PanoScene(canvas.current, dem, eph, { x: sr.site.x, y: sr.site.y, lat: p.lat, lon: p.lon, hTerrain: p.hTerrain }, p);
@@ -39,15 +71,53 @@ export default function PanoView() {
       el.setPointerCapture(e.pointerId);
       el.focus();
     };
+    const geoText = (e: number, n: number) => {
+      const g = scene.geoAt(e, n);
+      return `${formatLatLon(g.lat, g.lon, 3)} · ${Math.round(g.h)} m`;
+    };
+    let lastHover = 0;
+    const onHover = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      const hit = scene.groundHit(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      scene.setMarker(scene.flying ? null : hit); // every move, so it sticks to the cursor; hidden in flight
+      dirty = true;
+      const t = performance.now();
+      if (t - lastHover < 60) return; // the text readout is throttled
+      lastHover = t;
+      setHover(hit ? `${geoText(hit.x, hit.y)} · ${fmtDistance(hit.distanceTo(scene.pos))} away` : '');
+    };
+    const onLeave = () => {
+      setHover('');
+      scene.setMarker(null);
+      dirty = true;
+    };
     const onMove = (e: PointerEvent) => {
-      if (!drag || drag.id !== e.pointerId) return;
+      if (!drag || drag.id !== e.pointerId) return onHover(e);
+      scene.setMarker(null); // looking around: the world turns under a still cursor
       scene.yaw -= (e.clientX - drag.x) * 0.003;
+      scene.cancelTurn(); // the user takes over the view
       scene.pitch = Math.max(-1.4, Math.min(1.4, scene.pitch + (e.clientY - drag.y) * 0.003));
       drag.x = e.clientX;
       drag.y = e.clientY;
       dirty = true;
     };
     const onUp = () => (drag = null);
+    const onDblClick = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      const hit = scene.pick(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      if (!hit) return;
+      if (scene.geoAt(hit.x, hit.y).lat > -80) return; // outside the polar DEM: no horizon there
+      scene.setMarker(null); // hide before moving; it returns on the next mouse move after the flight
+      scene.flyTo(hit, performance.now());
+      setFlying(true);
+      dirty = true;
+      // select the target now so horizon + metrics are computed while we fly
+      const [x, y] = scene.toGrid(hit.x, hit.y);
+      const ref = customFromXY(x, y);
+      ownMoves.current.add(refKey(ref));
+      siteRef.value = ref;
+    };
+    scene.onFlightEnd = () => setFlying(false);
     const KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
     const onKey = (e: KeyboardEvent) => {
       if (/INPUT|SELECT|TEXTAREA/.test((e.target as HTMLElement)?.tagName)) return;
@@ -62,6 +132,8 @@ export default function PanoView() {
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
+    el.addEventListener('dblclick', onDblClick);
+    el.addEventListener('pointerleave', onLeave);
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
     const blur = () => keys.clear();
@@ -74,6 +146,16 @@ export default function PanoView() {
         time.value;
         lighting.value;
         scene.eyeHeight = hObs.value;
+        dirty = true;
+      }),
+      // "look at the Sun / Earth" buttons (right panel): turn to the body as seen now
+      effect(() => {
+        const req = panoLookAt.value;
+        if (!req || req.n <= lookSeen.current || !ready) return;
+        lookSeen.current = req.n;
+        const s = scene.state;
+        if (req.target === 'sun') scene.turnTo(s.sunAz, s.sunEl, performance.now());
+        else scene.turnTo(s.earthAz, s.earthEl, performance.now());
         dirty = true;
       }),
       effect(() => {
@@ -95,9 +177,11 @@ export default function PanoView() {
       const f = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
       const s = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
       if (f || s) {
+        scene.cancelFlight();
         scene.move(f, s, dt, keys.has('shift'));
         dirty = true;
-      }
+      } else if (scene.stepFlight(now)) dirty = true;
+      if (scene.stepTurn(now)) dirty = true;
       if (!dirty || document.hidden) return;
       dirty = false;
       const w = wrap.current?.clientWidth ?? 800;
@@ -105,6 +189,8 @@ export default function PanoView() {
       scene.update(time.peek(), lighting.peek() === 'enhanced' ? 0.05 : 0);
       scene.render(w, h);
       setHeading(scene.state.heading);
+      const off = scene.pos.length();
+      setHere(`${geoText(scene.pos.x, scene.pos.y)} · ${off < 1 ? 'at the site' : `${fmtDistance(off)} from the site`}`);
     };
 
     scene
@@ -112,13 +198,26 @@ export default function PanoView() {
       .then(() => {
         if (disposed) return;
         scene.update(time.peek(), 0.035);
-        scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
+        const c = carry.current;
+        carry.current = null;
+        if (c) {
+          // same spot and direction as before the rebuild (camera may have walked off the target)
+          scene.pos.copy(scene.fromGrid(c.grid[0], c.grid[1]));
+          scene.clampToWalk();
+          scene.setGridHeading(c.heading);
+          scene.pitch = c.pitch;
+        } else scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
         setMsg('');
+        ready = true;
         raf = requestAnimationFrame(loop);
       })
       .catch((e: Error) => setMsg('Panorama failed: ' + e.message));
 
     return () => {
+      if (adoptingOwn.current && ready) {
+        carry.current = { heading: scene.gridHeading(), pitch: scene.pitch, grid: scene.toGrid(scene.pos.x, scene.pos.y) };
+      }
+      adoptingOwn.current = false;
       disposed = true;
       cancelAnimationFrame(raf);
       stops.forEach((d) => d());
@@ -128,7 +227,7 @@ export default function PanoView() {
       window.removeEventListener('blur', blur);
       scene.dispose();
     };
-  }, [sr?.key]);
+  }, [sceneSr?.key]);
 
   const now = instant.value;
   const m = metricsState.value;
@@ -137,7 +236,7 @@ export default function PanoView() {
   const earthUp = now ? now.fEarth >= dte.value : false;
   return (
     <div class="pano fade-in" ref={wrap}>
-      <canvas ref={canvas} tabIndex={0} aria-label="First-person view of the lunar surface. Drag to look around, W A S D to walk, Shift to move fast." />
+      <canvas ref={canvas} tabIndex={0} aria-label="First-person view of the lunar surface. Drag to look around, double-click the ground or a mountain to move there, W A S D to walk, Shift to move fast." />
       <div class="compass" aria-hidden="true">
         {COMPASS[Math.round(heading / 45) % 8]} {Math.round(heading)}°
       </div>
@@ -184,8 +283,15 @@ export default function PanoView() {
           ← Map
         </button>
       </div>
+      {!msg && (
+        <div class="pano-coords">
+          <div class="readout">You: {here}</div>
+          <div class="readout">{hover ? `Cursor: ${hover}` : 'Move the cursor over the terrain'}</div>
+        </div>
+      )}
+      <HeightControl />
       {msg && <div class="loading">{msg}</div>}
-      <div class="pano-help">Drag to look · WASD walk 1.4 m/s · Shift 25 m/s · LOLA 5–20 m terrain{micro ? ' + synthetic sub-DEM relief (statistical crater/boulder model, not imagery)' : ', procedural (synthetic) surface texture'}</div>
+      <div class="pano-help">Drag to look · Double-click to go there · WASD walk {WALK_SPEED} m/s · Shift {FAST_SPEED} m/s · LOLA 5–20 m terrain{micro ? ' + synthetic sub-DEM relief (statistical crater/boulder model, not imagery)' : ', procedural (synthetic) surface texture'}</div>
     </div>
   );
 }

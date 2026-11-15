@@ -1,13 +1,38 @@
 // Metric tiles (always-visible "time to sunset / Earthset") and the educational panel.
-import { audience, dte, instant, metricsState, site, siteError, siteResult, time } from '../state/store';
+import type { ComponentChildren } from 'preact';
+import { audience, dte, instant, metricsState, mode, requestPanoLook, site, siteError, siteResult, time } from '../state/store';
 import { countdownMs } from '../state/countdown';
 import { fmtHeight } from './heightScale';
 import { fmtCountdown, fmtDate, fmtDeg, fmtDuration, fmtHours, fmtPct } from './format';
 
-function Tile(props: { label: string; value: string; sub?: string; tone?: 'sun' | 'earth' | 'warn' | 'good'; hint?: string; big?: boolean }) {
+function TargetIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+      <circle cx="7" cy="7" r="4.2" />
+      <circle cx="7" cy="7" r="1" fill="currentColor" stroke="none" />
+      <path d="M7 0.8v2.2M7 11v2.2M0.8 7h2.2M11 7h2.2" />
+    </svg>
+  );
+}
+
+/** Panorama only: a target button that turns the camera to the Sun / Earth. */
+function LookAtButton({ target }: { target: 'sun' | 'earth' }) {
+  if (mode.value !== 'pano') return null;
+  const name = target === 'sun' ? 'Sun' : 'Earth';
+  return (
+    <button class="look-at" onClick={() => requestPanoLook(target)} title={`Turn the panorama to the ${name}`} aria-label={`Turn the panorama to the ${name}`}>
+      <TargetIcon />
+    </button>
+  );
+}
+
+function Tile(props: { label: string; value: string; sub?: string; tone?: 'sun' | 'earth' | 'warn' | 'good'; hint?: string; big?: boolean; action?: ComponentChildren }) {
   return (
     <div class={`tile ${props.tone ?? ''} ${props.big ? 'big' : ''}`} title={props.hint}>
-      <div class="tile-label">{props.label}</div>
+      <div class="tile-label">
+        {props.label}
+        {props.action}
+      </div>
       <div class="tile-value">{props.value}</div>
       {props.sub && <div class="tile-sub">{props.sub}</div>}
     </div>
@@ -53,6 +78,7 @@ export function MetricTiles() {
       <Tile
         tone="sun"
         label="Sun now"
+        action={<LookAtButton target="sun" />}
         value={now ? `${fmtPct(now.fSun)} visible` : '—'}
         sub={now ? `elevation ${fmtDeg(now.sunEl)} · horizon ${fmtDeg(now.horizonAtSun)}` : ''}
         hint="Fraction of the solar disk above the terrain horizon (partial occlusion is normal at the pole)."
@@ -60,6 +86,7 @@ export function MetricTiles() {
       <Tile
         tone="earth"
         label="Earth now"
+        action={<LookAtButton target="earth" />}
         value={now ? `${fmtPct(now.fEarth)} visible` : '—'}
         sub={now ? `elevation ${fmtDeg(now.earthEl)} · az ${now.earthAz.toFixed(0)}°` : ''}
         hint="The Earth hangs almost fixed in the lunar sky; libration makes it wobble by several degrees."
@@ -72,7 +99,7 @@ export function MetricTiles() {
         sub={mm ? `${mm.nSunsets} sunset${mm.nSunsets === 1 ? '' : 's'} in interval` : ''}
         hint="Longest continuous period with < 5% of the Sun visible — the battery/survival driver. '+' = runs past the interval edge."
       />
-      <Tile tone="earth" label="Earth visibility (DTE)" value={mm ? fmtPct(mm.earthFrac) : '…'} sub={mm ? `longest gap ${fmtHours(mm.longestNoCommsH)}` : ''} hint="Share of time with direct-to-Earth line of sight from the antenna (Antenna height, left panel)." />
+      <Tile tone="earth" label="Earth visibility (DTE)" value={mm ? fmtPct(mm.earthFrac) : '…'} sub={mm ? `longest gap ${fmtHours(mm.longestNoCommsH)}` : ''} hint="Share of time with direct-to-Earth line of sight from the antenna (Antenna height, in the Earth link block below)." />
       <Tile
         label="Vertical vs flat panel"
         value={mm ? `×${mm.powerRatio >= 100 ? '100+' : mm.powerRatio.toFixed(0)}` : '…'}

@@ -51,6 +51,16 @@ export function score(f: Features, w: Weights, footprintM: number, slopeLimit: n
   return (w.illum * u.illum + w.dark * u.dark + w.earth * u.earth + w.slope * u.slope + w.relief * u.relief) / sw;
 }
 
+/**
+ * The interval half of the score — sunlight, longest night, Earth link — with the same utilities
+ * and preset weights, renormalised over those three terms. Needs only a site's interval metrics
+ * (no terrain), e.g. to colour a scenario card; slope / relief and the slope cut are not included.
+ */
+export function intervalScore(f: Pick<Features, 'illum' | 'dark' | 'earth'>, w: Weights, darkRef: number): number {
+  const u = utilities({ ...f, slopeMax: 0, slopeMean: 0, relief: 0 }, 1, 1, darkRef);
+  return (w.illum * u.illum + w.dark * u.dark + w.earth * u.earth) / (w.illum + w.dark + w.earth);
+}
+
 /** Gamma(k,1) sampler (Marsaglia–Tsang), k ≥ 1 here. */
 function gamma(k: number, rnd: () => number): number {
   const d = k - 1 / 3;

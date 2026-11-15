@@ -35,6 +35,24 @@ export function tickPos(h: number): number {
   return POS_MIN + Math.round((heightToPos(h) - POS_MIN) / POS_STEP) * POS_STEP;
 }
 
+/**
+ * Keyboard step for the log sliders. A native range step (POS_STEP) is finer than the 0.1 m / 1 m
+ * snap, so an arrow press would snap straight back to the same height; step by the snap instead.
+ * Arrows: ±0.1 m below 10 m, ±1 m above; PageUp/PageDown: next tick; Home/End: 1 / 100 m.
+ * Returns null for keys the slider should not handle.
+ */
+export function keyStepHeight(h: number, key: string): number | null {
+  const up = key === 'ArrowUp' || key === 'ArrowRight';
+  const down = key === 'ArrowDown' || key === 'ArrowLeft';
+  if (up) return snapHeight(h + (h < 10 ? 0.1 : 1));
+  if (down) return snapHeight(h - (h <= 10 ? 0.1 : 1));
+  if (key === 'PageUp') return H_TICKS.find((t) => t > h + 1e-9) ?? H_MAX;
+  if (key === 'PageDown') return [...H_TICKS].reverse().find((t) => t < h - 1e-9) ?? H_MIN;
+  if (key === 'Home') return H_MIN;
+  if (key === 'End') return H_MAX;
+  return null;
+}
+
 export function fmtHeight(h: number): string {
   return h < 10 ? `${h.toFixed(1)} m` : `${Math.round(h)} m`;
 }

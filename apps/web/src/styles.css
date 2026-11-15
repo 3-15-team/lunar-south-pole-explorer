@@ -132,6 +132,8 @@ input[type='range'] { accent-color: var(--accent); }
 .slider-row.slip span { font-weight: 600; color: var(--accent); }
 
 .cards { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.scen-head { position: sticky; top: 0; z-index: 3; background: var(--panel); margin: -12px -12px 0; padding: 12px 12px 8px; border-bottom: 1px solid transparent; }
+.cards .card { scroll-margin-top: 92px; } /* revealed cards land below the sticky header */
 .card { border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: var(--radius); padding: 8px; background: var(--panel-2); }
 /* "already pinned": pulse the existing card in its own colour (reduced motion: the scroll alone) */
 .card.flash { animation: card-flash 0.5s ease-in-out 3; }

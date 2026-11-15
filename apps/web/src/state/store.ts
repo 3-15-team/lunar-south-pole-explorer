@@ -17,9 +17,6 @@ export type Preset = 'lander' | 'base';
 
 export const HOUR = 3600e3;
 export const DAY = 24 * HOUR;
-// Okabe–Ito (colour-blind safe), black dropped for the dark UI; cycles beyond 7 scenarios
-export const SCENARIO_COLORS = ['#E69F00', '#56B4E9', '#CC79A7', '#009E73', '#0072B2', '#D55E00', '#F0E442'];
-export const scenarioColor = (i: number): string => SCENARIO_COLORS[i % SCENARIO_COLORS.length];
 
 export interface Scenario {
   id: string;

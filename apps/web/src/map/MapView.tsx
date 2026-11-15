@@ -20,7 +20,6 @@ import { formatLatLon, xyToLatLon } from '../core/geo';
 import { PRESETS, rankStability, type Candidate } from '../core/suitability';
 import { customFromXY, resolveSite } from '../data/sites';
 import {
-  scenarioColor,
   catalog,
   computeOnline,
   dte,
@@ -43,6 +42,7 @@ import {
   time,
   type Layer as LayerId,
 } from '../state/store';
+import { scenarioSuit } from '../state/scenarioSuit';
 import { config } from '../config';
 import { cividis, fmtHours, fmtPct } from '../ui/format';
 import { fmtHeight } from '../ui/heightScale';
@@ -226,13 +226,14 @@ export default function MapView() {
         const cur = site.value;
         const L = footprint.value;
         selSrc.clear();
-        scenarios.value.forEach((sc, i) => {
+        const suits = scenarioSuit.value; // same Suitability colour as the scenario card
+        scenarios.value.forEach((sc) => {
           const r = resolveSite(sc.site, catalog.value);
           if (!r) return;
           const f = new Feature(new Point([r.x, r.y]));
           f.setStyle(
             new Style({
-              image: new RegularShape({ points: 4, radius: 9, angle: Math.PI / 4, fill: new Fill({ color: scenarioColor(i) }), stroke: new Stroke({ color: '#000', width: 1.5 }) }),
+              image: new RegularShape({ points: 4, radius: 9, angle: Math.PI / 4, fill: new Fill({ color: suits[sc.id]?.color ?? '#4a5361' }), stroke: new Stroke({ color: '#000', width: 1.5 }) }),
             }),
           );
           selSrc.addFeature(f);

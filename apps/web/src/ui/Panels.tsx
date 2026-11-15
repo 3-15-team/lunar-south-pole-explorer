@@ -11,7 +11,6 @@ import {
   pinScenario,
   removeScenario,
   revealScenario,
-  scenarioColor,
   scenarioResults,
   scenarios,
   siteRef,
@@ -20,6 +19,7 @@ import {
   time,
   type MetricsState,
 } from '../state/store';
+import { scenarioSuit } from '../state/scenarioSuit';
 import { delta, fmtDate, fmtHours, fmtPct } from './format';
 
 const ORDER: SiteKind[] = ['pgda-5m', 'artemis', 'clps', 'mission', 'reference'];
@@ -141,6 +141,7 @@ export function ScenarioPanel() {
   const slip = slipDays.value;
   const planner = audience.value === 'planner';
   const shown = revealScenario.value;
+  const suits = scenarioSuit.value;
   const cardsRef = useRef<HTMLDivElement>(null);
   // scroll the left panel to the card just pinned (or to the existing copy of a duplicate). Cards
   // change height while their metrics load (pinning recomputes every scenario), which moves the
@@ -162,12 +163,15 @@ export function ScenarioPanel() {
   }, [shown?.n]);
   return (
     <section class="panel scenarios" aria-label="Scenario comparison">
-      <div class="panel-title">
-        Compare scenarios <span class="muted">({list.length})</span>
+      {/* sticks to the top of the left panel while scrolling a long card list, so Pin stays reachable */}
+      <div class="scen-head">
+        <div class="panel-title">
+          Compare scenarios <span class="muted">({list.length})</span>
+        </div>
+        <button class="btn primary wide" onClick={pinScenario} disabled={!site.value}>
+          + Pin current site & interval
+        </button>
       </div>
-      <button class="btn primary wide" onClick={pinScenario} disabled={!site.value}>
-        + Pin current site & interval
-      </button>
       <label class="slider-row slip" title="Shift every pinned scenario's interval and compare">
         <span>What if it slips?</span>
         <input type="range" min={-30} max={30} step={1} value={slip} onInput={(e) => (slipDays.value = +(e.target as HTMLInputElement).value)} aria-label="Slip in days" />
@@ -178,19 +182,21 @@ export function ScenarioPanel() {
       </label>
       {list.length === 0 && <div class="hint">Pin site/date scenarios to compare them side by side, then drag the slip slider.</div>}
       <div class="cards" ref={cardsRef}>
-        {list.map((sc, i) => {
+        {list.map((sc) => {
           const r = res[sc.id] ?? {};
           const s = resolveSite(sc.site, catalog.value);
           const a = r.base?.metrics;
           const b = r.slipped?.metrics;
           const flashing = !!shown?.flash && shown.id === sc.id;
+          const suit = suits[sc.id];
           return (
             <article
               // a new key on each repeat restarts the flash animation
               key={flashing ? `${sc.id}:${shown.n}` : sc.id}
               data-id={sc.id}
               class={`card${flashing ? ' flash' : ''}`}
-              style={{ '--c': scenarioColor(i) } as Record<string, string>}
+              // chip + stripe colour = the point's Suitability score on the map's cividis ramp
+              style={{ '--c': suit?.color ?? 'var(--line)' } as Record<string, string>}
             >
               <header>
                 <button
@@ -202,7 +208,7 @@ export function ScenarioPanel() {
                   }}
                   title="Show this scenario"
                 >
-                  <span class="chip" />
+                  <span class="chip" title={suit?.label} aria-label={suit?.label} />
                   {s?.name ?? sc.label ?? 'Scenario'}
                 </button>
                 <button class="icon" aria-label="Remove scenario" onClick={() => removeScenario(sc.id)}>

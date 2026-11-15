@@ -1,6 +1,7 @@
 // Metric tiles (always-visible "time to sunset / Earthset") and the educational panel.
 import { audience, dte, instant, metricsState, site, siteError, siteResult, time } from '../state/store';
 import { countdownMs } from '../state/countdown';
+import { fmtHeight } from './heightScale';
 import { fmtCountdown, fmtDate, fmtDeg, fmtDuration, fmtHours, fmtPct } from './format';
 
 function Tile(props: { label: string; value: string; sub?: string; tone?: 'sun' | 'earth' | 'warn' | 'good'; hint?: string; big?: boolean }) {
@@ -83,7 +84,7 @@ export function MetricTiles() {
           <Tile label="Sun elevation (interval)" value={mm?.sunElStats ? `${fmtDeg(mm.sunElStats.min, 1)} … ${fmtDeg(mm.sunElStats.max, 1)}` : '—'} sub={mm?.sunElStats ? `mean ${fmtDeg(mm.sunElStats.mean)}` : 'never above the horizon'} />
           <Tile label="Earth elevation (interval)" value={mm ? `${fmtDeg(mm.earthElStats.min, 1)} … ${fmtDeg(mm.earthElStats.max, 1)}` : '—'} sub="libration wobble" />
           <Tile label="Shadow of a 2 m mast" value={shadow ? `${shadow >= 1000 ? (shadow / 1000).toFixed(1) + ' km' : Math.round(shadow) + ' m'}` : '∞'} sub="at the current Sun elevation" />
-          <Tile label="Site" value={`${fmtDeg(sr.profile.lat, 3)}, ${fmtDeg(sr.profile.lon, 3)}`} sub={`terrain ${Math.round(sr.profile.hTerrain)} m · mast ${sr.profile.hObs} m · DEM ${sr.profile.finestRes} m/px`} />
+          <Tile label="Site" value={`${fmtDeg(sr.profile.lat, 3)}, ${fmtDeg(sr.profile.lon, 3)}`} sub={`terrain ${Math.round(sr.profile.hTerrain)} m · observer ${fmtHeight(sr.profile.hObs)} above surface · DEM ${sr.profile.finestRes} m/px`} />
         </>
       )}
       {planner && mm && mm.dteWindows.length > 0 && (

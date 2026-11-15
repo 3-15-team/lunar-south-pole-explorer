@@ -7,7 +7,7 @@ Shared golden test vectors: `libs/lunarcore/tests/golden/*.json` (both test suit
 ## Inputs
 
 - Site: lat φ, lon λ (MOON_ME, degrees), terrain height `h_t` (m above R = 1737.4 km, from
-  the DEM), observer height `h_o` above terrain (default **2 m**, UI range 0–10 m).
+  the DEM), observer height `h_o` above terrain (default **2 m**, UI range 1–100 m on a logarithmic slider, ADR-120).
   Observer position `P = (R + h_t + h_o)·u(φ,λ)`.
 - Body vectors from the ephemeris table (Moon-centred, MOON_ME, km): `S(t)`, `E(t)`.
   Topocentric vectors `s = S − P`, `e = E − P` (P in km).

@@ -10,6 +10,11 @@ export function fmtDuration(ms: number | null | undefined): string {
   return neg ? '−' + s : s;
 }
 
+/** Countdown to an event; null = stale (being recomputed) → ellipsis, never a negative time. */
+export function fmtCountdown(ms: number | null): string {
+  return ms === null ? '…' : fmtDuration(ms);
+}
+
 export function fmtHours(h: number | null | undefined): string {
   if (h === null || h === undefined || !Number.isFinite(h)) return '—';
   return h >= 48 ? `${(h / 24).toFixed(1)} d` : `${h.toFixed(h < 10 ? 1 : 0)} h`;

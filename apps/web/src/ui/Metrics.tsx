@@ -1,6 +1,7 @@
 // Metric tiles (always-visible "time to sunset / Earthset") and the educational panel.
 import { audience, dte, instant, metricsState, site, siteError, siteResult, time } from '../state/store';
-import { fmtDate, fmtDeg, fmtDuration, fmtHours, fmtPct } from './format';
+import { countdownMs } from '../state/countdown';
+import { fmtCountdown, fmtDate, fmtDeg, fmtDuration, fmtHours, fmtPct } from './format';
 
 function Tile(props: { label: string; value: string; sub?: string; tone?: 'sun' | 'earth' | 'warn' | 'good'; hint?: string; big?: boolean }) {
   return (
@@ -27,8 +28,8 @@ export function MetricTiles() {
   const earthUp = now ? now.fEarth >= dte.value : false;
   const sunNext = m?.sunNext;
   const earthNext = m?.earthNext;
-  const sunCount = sunNext ? sunNext.t - t : null;
-  const earthCount = earthNext ? earthNext.t - t : null;
+  const sunCount = m && sunNext ? countdownMs(m, sunNext, t) : null;
+  const earthCount = m && earthNext ? countdownMs(m, earthNext, t) : null;
   const shadow = now && now.sunEl > 0.05 ? 2 / Math.tan((now.sunEl * Math.PI) / 180) : null;
   return (
     <div class="tiles" aria-live="polite">
@@ -36,7 +37,7 @@ export function MetricTiles() {
         big
         tone={sunUp ? 'sun' : 'warn'}
         label={sunUp ? 'Sunset in' : 'Sunrise in'}
-        value={sunNext ? fmtDuration(sunCount) : '> 60 d'}
+        value={sunNext ? fmtCountdown(sunCount) : '> 60 d'}
         sub={sunNext ? fmtDate(sunNext.t) : 'no change within 60 days'}
         hint="Time until the solar disk fully disappears behind (or first appears above) the real terrain horizon."
       />
@@ -44,7 +45,7 @@ export function MetricTiles() {
         big
         tone={earthUp ? 'earth' : 'warn'}
         label={earthUp ? 'Earthset in' : 'Earthrise in'}
-        value={earthNext ? fmtDuration(earthCount) : '> 60 d'}
+        value={earthNext ? fmtCountdown(earthCount) : '> 60 d'}
         sub={earthNext ? fmtDate(earthNext.t) : 'no change within 60 days'}
         hint={`Direct-to-Earth comms need ≥ ${Math.round(dte.value * 100)}% of Earth's disk above the horizon.`}
       />
@@ -184,6 +185,10 @@ function fmtShortDuration(ms: number): string {
   return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h` : `${min % 60}m`;
 }
 
+function fmtCount(ms: number | null): string {
+  return ms === null ? '…' : fmtShortDuration(ms);
+}
+
 function RailItem(props: { glyph: string; value: string; tone?: string; title: string }) {
   return (
     <div class={`rail-item ${props.tone ?? ''}`} title={props.title} aria-label={`${props.title}: ${props.value}`}>
@@ -209,13 +214,13 @@ export function MetricRail() {
       <RailItem
         glyph={sunUp ? '☀↓' : '☀↑'}
         tone={sunUp ? 'sun' : 'warn'}
-        value={ms?.sunNext ? fmtShortDuration(ms.sunNext.t - t) : '>60d'}
+        value={ms?.sunNext ? fmtCount(countdownMs(ms, ms.sunNext, t)) : '>60d'}
         title={sunUp ? 'Sunset in' : 'Sunrise in'}
       />
       <RailItem
         glyph={earthUp ? '🜨↓' : '🜨↑'}
         tone={earthUp ? 'earth' : 'warn'}
-        value={ms?.earthNext ? fmtShortDuration(ms.earthNext.t - t) : '>60d'}
+        value={ms?.earthNext ? fmtCount(countdownMs(ms, ms.earthNext, t)) : '>60d'}
         title={earthUp ? 'Earthset in' : 'Earthrise in'}
       />
       <div class="rail-sep" />

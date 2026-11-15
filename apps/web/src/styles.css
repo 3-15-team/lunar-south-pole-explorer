@@ -178,7 +178,11 @@ table.cmp thead th { text-align: right; font-size: 10px; }
 .tile.earth { border-top: 3px solid var(--earth); }
 .tile.warn { border-top: 3px solid var(--bad); }
 .tile.good { border-top: 3px solid var(--good); }
-.tile-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.tile-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; }
+.look-at { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; margin: -3px 0; background: none; border: 1px solid transparent; border-radius: 4px; color: var(--muted); cursor: pointer; }
+.look-at:hover { color: var(--text); border-color: var(--line); background: var(--panel-2); }
+.tile.sun .look-at:hover { color: var(--accent); }
+.tile.earth .look-at:hover { color: var(--earth); }
 .tile-value { font-size: 16px; font-weight: 600; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile-sub { font-size: 11px; color: var(--muted); }
 .windows { margin: 4px 0 0; padding-left: 16px; font-size: 11px; font-family: var(--mono); }

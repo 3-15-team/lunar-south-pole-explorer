@@ -83,6 +83,9 @@ export const slopeLimit = signal(10);
 export const scenarios = signal<Scenario[]>([]);
 export const slipDays = signal(10);
 export const mode = signal<Mode>('map');
+/** Panorama: request to turn the camera to the Sun / Earth (`n` re-triggers the same target). */
+export const panoLookAt = signal<{ target: 'sun' | 'earth'; n: number } | null>(null);
+export const requestPanoLook = (target: 'sun' | 'earth') => (panoLookAt.value = { target, n: (panoLookAt.peek()?.n ?? 0) + 1 });
 export const audience = signal<Audience>('explorer');
 export const lighting = signal<'enhanced' | 'realistic'>('enhanced');
 /** Panorama statistical micro-relief on/off (UI toggle; initial value from config.panoMicroDefault). */

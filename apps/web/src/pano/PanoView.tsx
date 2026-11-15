@@ -1,7 +1,7 @@
 // Panorama mode (lazy). Uses the shared store: site, time, observer height, lighting.
 import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, services, siteRef, siteResult, time } from '../state/store';
+import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, panoLookAt, services, siteRef, siteResult, time } from '../state/store';
 import { customFromXY, refKey } from '../data/sites';
 import { config } from '../config';
 import { formatLatLon } from '../core/geo';
@@ -34,6 +34,8 @@ export default function PanoView() {
   const adoptingOwn = useRef(false);
   // viewer pose carried across an own-move rebuild, in grid coordinates (frame-independent)
   const carry = useRef<{ heading: [number, number]; pitch: number; grid: [number, number] } | null>(null);
+  // last handled "look at" request: a scene rebuild must not replay an old one
+  const lookSeen = useRef(panoLookAt.peek()?.n ?? 0);
 
   useEffect(() => {
     if (sr?.key === sceneSr?.key) return;
@@ -93,6 +95,7 @@ export default function PanoView() {
       if (!drag || drag.id !== e.pointerId) return onHover(e);
       scene.setMarker(null); // looking around: the world turns under a still cursor
       scene.yaw -= (e.clientX - drag.x) * 0.003;
+      scene.cancelTurn(); // the user takes over the view
       scene.pitch = Math.max(-1.4, Math.min(1.4, scene.pitch + (e.clientY - drag.y) * 0.003));
       drag.x = e.clientX;
       drag.y = e.clientY;
@@ -145,6 +148,16 @@ export default function PanoView() {
         scene.eyeHeight = hObs.value;
         dirty = true;
       }),
+      // "look at the Sun / Earth" buttons (right panel): turn to the body as seen now
+      effect(() => {
+        const req = panoLookAt.value;
+        if (!req || req.n <= lookSeen.current || !ready) return;
+        lookSeen.current = req.n;
+        const s = scene.state;
+        if (req.target === 'sun') scene.turnTo(s.sunAz, s.sunEl, performance.now());
+        else scene.turnTo(s.earthAz, s.earthEl, performance.now());
+        dirty = true;
+      }),
       effect(() => {
         const want = microRelief.value;
         scene.setMicro(want).then((active) => {
@@ -168,6 +181,7 @@ export default function PanoView() {
         scene.move(f, s, dt, keys.has('shift'));
         dirty = true;
       } else if (scene.stepFlight(now)) dirty = true;
+      if (scene.stepTurn(now)) dirty = true;
       if (!dirty || document.hidden) return;
       dirty = false;
       const w = wrap.current?.clientWidth ?? 800;

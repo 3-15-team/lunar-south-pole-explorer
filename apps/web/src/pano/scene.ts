@@ -26,6 +26,8 @@ export const WALK_SPEED = 5;
 export const FAST_SPEED = 25;
 /** Duration of the double-click "fly to point" move. */
 export const FLY_TO_DURATION_MS = 1000;
+/** Duration of the "look at the Sun / Earth" camera turn. */
+export const TURN_DURATION_MS = 600;
 // terrain mesh: MESH_N² vertices, sinh-spaced (dense at the site, sparse towards the edge)
 const MESH_N = 640;
 const MESH_A = 4.2;
@@ -302,6 +304,7 @@ export class PanoScene {
   private meshCoord = new Float32Array(MESH_N);
   private meshH: Float32Array | null = null;
   private flight: { from: THREE.Vector2; to: THREE.Vector2; t0: number } | null = null;
+  private turn: { yaw0: number; dYaw: number; pitch0: number; dPitch: number; t0: number } | null = null;
   eyeHeight = 2;
   yaw = 0;
   pitch = 0.02;
@@ -944,6 +947,30 @@ export class PanoScene {
 
   lookAtAzimuth(azDeg: number): void {
     this.yaw = (azDeg * Math.PI) / 180;
+  }
+
+  /** Smoothly turn the view to azimuth / elevation (deg), the short way round; see stepTurn(). */
+  turnTo(azDeg: number, elDeg: number, now: number): void {
+    const target = (azDeg * Math.PI) / 180;
+    const dYaw = Math.atan2(Math.sin(target - this.yaw), Math.cos(target - this.yaw)); // shortest
+    const pitch = Math.max(-1.4, Math.min(1.4, (elDeg * Math.PI) / 180));
+    this.turn = { yaw0: this.yaw, dYaw, pitch0: this.pitch, dPitch: pitch - this.pitch, t0: now };
+  }
+
+  cancelTurn(): void {
+    this.turn = null;
+  }
+
+  /** Advance an active turn; returns true while the view is changing. */
+  stepTurn(now: number): boolean {
+    const t = this.turn;
+    if (!t) return false;
+    const u = Math.min(1, Math.max(0, (now - t.t0) / TURN_DURATION_MS));
+    const k = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; // ease-in-out cubic
+    this.yaw = t.yaw0 + t.dYaw * k;
+    this.pitch = t.pitch0 + t.dPitch * k;
+    if (u >= 1) this.turn = null;
+    return true;
   }
 
   dispose(): void {

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 from contextlib import asynccontextmanager
@@ -47,8 +48,13 @@ def _warmup() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    threading.Thread(target=_warmup, daemon=True).start()
-    yield
+    warmup = threading.Thread(target=_warmup, daemon=True)
+    warmup.start()
+    try:
+        yield
+    finally:
+        # Finish compilation before test capture/interpreter resources are closed.
+        await asyncio.to_thread(warmup.join)
 
 
 app = FastAPI(title="Lunar South Pole Site Explorer - compute", version=VERSION, lifespan=lifespan)

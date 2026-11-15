@@ -6,6 +6,9 @@ COPY pipeline/requirements.txt pipeline/requirements.txt
 COPY services/compute/requirements.txt services/compute/requirements.txt
 COPY libs/lunarcore libs/lunarcore
 RUN pip install -r requirements-dev.txt -e libs/lunarcore
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN python -c "import rasterio, shapely, spiceypy"
 COPY pipeline pipeline
 COPY services services
 COPY tools tools

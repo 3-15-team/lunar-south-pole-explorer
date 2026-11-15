@@ -44,6 +44,16 @@ const state = (page) =>
   const pickOk = JSON.stringify(opened) === JSON.stringify(want);
   console.log(pickOk ? `OK: pickers opened for ${opened.join(', ')}` : `FAIL: pickers ${JSON.stringify(opened)}`);
   ok = ok && pickOk;
+
+  // interval handles: double-click opens From / To and does not move the playhead
+  await page.evaluate(() => (window.__pickers = []));
+  const t0 = (await state(page)).t;
+  await page.locator('.tl-handle.start').dblclick();
+  await page.locator('.tl-handle.end').dblclick();
+  const fromHandles = await page.evaluate(() => window.__pickers);
+  const handlesOk = JSON.stringify(fromHandles) === JSON.stringify(['From', 'To']) && (await state(page)).t === t0;
+  console.log(handlesOk ? 'OK: handles open From, To; playhead unchanged' : `FAIL: handles ${JSON.stringify(fromHandles)}, t ${t0} -> ${(await state(page)).t}`);
+  ok = ok && handlesOk;
   await browser.close();
   process.exit(ok ? 0 : 1);
 })();

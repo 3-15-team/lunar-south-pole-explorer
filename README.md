@@ -78,7 +78,7 @@ overrides it for one tab):
 - Micro-relief can be switched on/off in the panorama ("Micro-relief" button). Its initial state defaults
   to **on**; the single place to change that default is `DEFAULT_CONFIG.panoMicroDefault` in
   `apps/web/src/config.ts`; per deployment `make up PANO_MICRO_DEFAULT=off`, per link `?micro=off`.
-- Map Earth visibility / Suitability for the **antenna height** (left panel) costs a second GPU horizon
+- Map Earth visibility / Suitability for the **antenna height** (right panel, Earth link block) costs a second GPU horizon
   pass, so it runs only on demand: `layer` (default) — automatically while one of those layers is shown
   and antenna ≠ observer height; `button` — only after "Use the … antenna" in the layer panel. Default in
   `DEFAULT_CONFIG.mapEarthAntenna`; per deployment `make up MAP_EARTH_ANTENNA=button`, per link `?earthant=button`.

@@ -72,7 +72,7 @@ export function MetricTiles() {
         sub={mm ? `${mm.nSunsets} sunset${mm.nSunsets === 1 ? '' : 's'} in interval` : ''}
         hint="Longest continuous period with < 5% of the Sun visible — the battery/survival driver. '+' = runs past the interval edge."
       />
-      <Tile tone="earth" label="Earth visibility (DTE)" value={mm ? fmtPct(mm.earthFrac) : '…'} sub={mm ? `longest gap ${fmtHours(mm.longestNoCommsH)}` : ''} hint="Share of time with direct-to-Earth line of sight from the antenna (Antenna height, left panel)." />
+      <Tile tone="earth" label="Earth visibility (DTE)" value={mm ? fmtPct(mm.earthFrac) : '…'} sub={mm ? `longest gap ${fmtHours(mm.longestNoCommsH)}` : ''} hint="Share of time with direct-to-Earth line of sight from the antenna (Antenna height, in the Earth link block below)." />
       <Tile
         label="Vertical vs flat panel"
         value={mm ? `×${mm.powerRatio >= 100 ? '100+' : mm.powerRatio.toFixed(0)}` : '…'}

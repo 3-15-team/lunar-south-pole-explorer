@@ -1,6 +1,5 @@
 // Left column: site catalogue + custom coordinates, pinned scenario cards with
 // "what if it slips" deltas.
-import type { Signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { formatLatLon, parseLatLon } from '../core/geo';
 import { KIND_LABEL, resolveSite, type Site, type SiteKind } from '../data/sites';
@@ -10,7 +9,6 @@ import {
   audience,
   catalog,
   catalogFallback,
-  hAnt,
   hObs,
   interval,
   pinScenario,
@@ -24,49 +22,7 @@ import {
   type MetricsState,
 } from '../state/store';
 import { delta, fmtDate, fmtHours, fmtPct } from './format';
-import { fmtHeight, H_TICKS, heightToPos, POS_MAX, POS_MIN, POS_STEP, posToHeight, tickPos } from './heightScale';
-
-/**
- * Height above the local surface, 1–100 m, log scale (ui/heightScale.ts). The readout follows the
- * drag; the horizon is recomputed once on release.
- */
-function HeightSlider(props: { value: Signal<number>; label: string; title: string; id: string }) {
-  const [drag, setDrag] = useState<number | null>(null);
-  const h = drag ?? props.value.value;
-  const pos = (e: Event) => posToHeight(+(e.target as HTMLInputElement).value);
-  return (
-    <label class="slider-row" title={props.title}>
-      <span>{props.label}</span>
-      <input
-        type="range"
-        min={POS_MIN}
-        max={POS_MAX}
-        step={POS_STEP}
-        list={`${props.id}-ticks`}
-        value={heightToPos(h)}
-        aria-valuetext={fmtHeight(h)}
-        onInput={(e) => setDrag(pos(e))}
-        onChange={(e) => {
-          props.value.value = pos(e);
-          setDrag(null);
-        }}
-      />
-      <datalist id={`${props.id}-ticks`}>
-        {H_TICKS.map((t) => (
-          <option key={t} value={tickPos(t)} label={`${t}`} />
-        ))}
-      </datalist>
-      <output>{fmtHeight(h)}</output>
-      <span class="scale-labels" aria-hidden="true">
-        {[1, 10, 100].map((t) => (
-          <span key={t} style={{ '--p': (heightToPos(t) - POS_MIN) / (POS_MAX - POS_MIN) }}>
-            {t === 100 ? '100 m' : t}
-          </span>
-        ))}
-      </span>
-    </label>
-  );
-}
+import { HeightSlider } from './HeightSlider';
 
 const ORDER: SiteKind[] = ['pgda-5m', 'artemis', 'clps', 'mission', 'reference'];
 
@@ -157,12 +113,6 @@ export function SitePanel() {
         id="height"
         label="Height above surface"
         title="Height of the camera / solar array above the local surface at the site (not above a datum). Drives the Sun metrics, the panorama eye and the map layers. Logarithmic: fine steps up to 10 m, coarser up to 100 m."
-      />
-      <HeightSlider
-        value={hAnt}
-        id="antenna"
-        label="Antenna height"
-        title="Height of the Earth-link antenna above the local surface. Drives Earth visibility (DTE), Earthrise/Earthset and comms gaps at the site. The map layers keep the observer height."
       />
     </section>
   );

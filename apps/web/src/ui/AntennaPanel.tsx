@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { linkShare, neededAt, neededForShare, type AntennaSeries } from '../core/antenna';
 import { dte, hAnt, metricsState, siteResult, time } from '../state/store';
 import { fmtDate, fmtPct } from './format';
+import { HeightSlider } from './HeightSlider';
 
 const EARTH = '#6FB7FF';
 const ANT = '#FFD45E';
@@ -170,7 +171,23 @@ export function AntennaPanel() {
     if (cdfRef.current) drawCdf(cdfRef.current, a, ant);
   }, [a, ant, t]);
   if (!sr) return null;
-  if (!a) return <div class="antenna panel-block muted">Earth link vs antenna height: computing…</div>;
+  const slider = (
+    <HeightSlider
+      value={hAnt}
+      id="antenna"
+      label="Antenna height"
+      title="Height of the Earth-link antenna above the local surface. Drives Earth visibility (DTE), Earthrise/Earthset and comms gaps at the site. The map layers keep the observer height."
+    />
+  );
+  if (!a)
+    return (
+      <section class="antenna panel-block" aria-label="Earth link versus antenna height">
+        <div class="panel-title">
+          Earth link vs antenna height <span class="muted">computing…</span>
+        </div>
+        {slider}
+      </section>
+    );
   const now = neededAt(a, t);
   const share = linkShare(a.need, ant);
   const qs = [0.5, 0.9, 1].map((q) => ({ q, h: neededForShare(a.need, q) }));
@@ -180,6 +197,7 @@ export function AntennaPanel() {
       <div class="panel-title">
         Earth link vs antenna height <span class="muted">≥ {Math.round(dte.value * 100)}% of the disk · cap {a.capM / 1000} km</span>
       </div>
+      {slider}
       <div class="ant-now">
         {now === null ? (
           <span class="muted">Move the playhead into the interval for the height needed now.</span>

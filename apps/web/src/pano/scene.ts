@@ -192,6 +192,9 @@ interface MicroTile {
 }
 
 /** Load the micro-relief tiles (data/web/micro): RG float16 with a full mip chain, repeat-wrapped. */
+/** Far-silhouette ring rows per azimuth: top, band bottom, deep skirt. */
+const SKIRT_ROWS = 3;
+
 export async function loadMicroRelief(base: string): Promise<{ coarse: MicroTile; fine: MicroTile }> {
   const r = await fetch(base + 'index.json');
   if (!r.ok) throw new Error('micro-relief index HTTP ' + r.status);
@@ -522,24 +525,37 @@ export class PanoScene {
     return m;
   }
 
-  /** Distant terrain beyond the mesh, drawn as a silhouette ring at the far-horizon elevation. */
+  /**
+   * Distant terrain beyond the mesh, drawn as a silhouette ring at the far-horizon elevation.
+   * Three rows per azimuth: top (far horizon), band (shaded as before) and a deep skirt down to
+   * ~−63°. The deep part closes the gap below the band: from a summit or rim the whole 10 km mesh
+   * can lie below the old band bottom (−6.8°), and black sky showed between mesh edge and ring
+   * (8 of 22 catalogue sites, more when walking or with a tall mast). The mesh is nearer, so it
+   * still covers the ring wherever it reaches.
+   */
   private makeSkirt(farDeg: Float32Array): THREE.Mesh {
     const n = farDeg.length;
     const D = 30000;
-    const pos = new Float32Array((n + 1) * 2 * 3);
-    const col = new Float32Array((n + 1) * 2 * 3);
+    const pos = new Float32Array((n + 1) * SKIRT_ROWS * 3);
+    const col = new Float32Array((n + 1) * SKIRT_ROWS * 3);
     for (let i = 0; i <= n; i++) {
       const az = ((i % n) / n) * Math.PI * 2;
-      const el = Math.max(-5, farDeg[i % n]) * (Math.PI / 180);
+      // −90 = no terrain beyond the near zone in this direction (DEM edge): keep a low wall
+      const el = Math.max(-60, farDeg[i % n]) * (Math.PI / 180);
       const e = Math.sin(az) * D;
       const nn = Math.cos(az) * D;
       const top = D * Math.tan(el) + this.eyeHeight;
-      pos.set([e, top, -nn, e, -D * 0.12, -nn], i * 6);
+      const band = Math.min(-D * 0.12, top - 1);
+      const deep = Math.min(-D * 2, band - 1);
+      pos.set([e, top, -nn, e, band, -nn, e, deep, -nn], i * SKIRT_ROWS * 3);
     }
     const idx: number[] = [];
     for (let i = 0; i < n; i++) {
-      const a = i * 2;
-      idx.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+      for (let r = 0; r < SKIRT_ROWS - 1; r++) {
+        const a = i * SKIRT_ROWS + r;
+        const b = a + SKIRT_ROWS;
+        idx.push(a, a + 1, b, b, a + 1, b + 1);
+      }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -645,13 +661,14 @@ export class PanoScene {
       const colAttr = this.skirt.geometry.getAttribute('color') as THREE.BufferAttribute;
       const sunAz = Math.atan2(sw.x, -sw.z);
       const sunUp = Math.asin(Math.max(-1, Math.min(1, sw.y)));
-      const n = colAttr.count / 2 - 1;
+      const n = colAttr.count / SKIRT_ROWS - 1;
       for (let i = 0; i <= n; i++) {
         const az = ((i % n) / n) * Math.PI * 2;
         const lit = Math.max(0, -Math.cos(az - sunAz)) * (sunUp > -0.02 ? 1 : 0);
         const g = 0.02 + 0.3 * lit;
-        colAttr.setXYZ(i * 2, g, g * 0.98, g * 0.95);
-        colAttr.setXYZ(i * 2 + 1, g * 0.4, g * 0.4, g * 0.4);
+        colAttr.setXYZ(i * SKIRT_ROWS, g, g * 0.98, g * 0.95);
+        colAttr.setXYZ(i * SKIRT_ROWS + 1, g * 0.4, g * 0.4, g * 0.4);
+        colAttr.setXYZ(i * SKIRT_ROWS + 2, g * 0.4, g * 0.4, g * 0.4);
       }
       colAttr.needsUpdate = true;
     }

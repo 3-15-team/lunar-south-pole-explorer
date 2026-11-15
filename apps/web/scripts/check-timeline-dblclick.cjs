@@ -26,8 +26,24 @@ const state = (page) =>
   const after = await state(page);
   console.log('before', before);
   console.log('after ', after);
-  const ok = after.t !== before.t && after.i === before.i;
-  console.log(ok ? 'OK: playhead moved, interval unchanged' : 'FAIL');
+  let ok = after.t !== before.t && after.i === before.i;
+  console.log(ok ? 'OK: playhead moved, interval unchanged' : 'FAIL: timeline double-click');
+
+  // Time / From / To blocks: a double-click on the label text must open that field's picker.
+  // The native popup isn't observable headless, so record which input showPicker() ran on.
+  await page.evaluate(() => {
+    window.__pickers = [];
+    HTMLInputElement.prototype.showPicker = function () {
+      window.__pickers.push(this.closest('.tl-field').querySelector('span').textContent);
+    };
+  });
+  const fields = page.locator('.tl-field');
+  for (let i = 0; i < (await fields.count()); i++) await fields.nth(i).locator('span').dblclick();
+  const opened = await page.evaluate(() => window.__pickers);
+  const want = ['Time (UTC)', 'From', 'To'];
+  const pickOk = JSON.stringify(opened) === JSON.stringify(want);
+  console.log(pickOk ? `OK: pickers opened for ${opened.join(', ')}` : `FAIL: pickers ${JSON.stringify(opened)}`);
+  ok = ok && pickOk;
   await browser.close();
   process.exit(ok ? 0 : 1);
 })();

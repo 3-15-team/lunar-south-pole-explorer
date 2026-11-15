@@ -18,6 +18,16 @@ const QUICK = [
   { label: '1 yr', ms: 365.25 * DAY },
 ];
 
+/** Double-click anywhere in a Time / From / To block opens that field's native date picker. */
+function openPicker(e: MouseEvent) {
+  const input = (e.currentTarget as HTMLElement).querySelector('input');
+  try {
+    input?.showPicker();
+  } catch {
+    input?.focus(); // no showPicker (old browser) or not allowed: at least focus the field
+  }
+}
+
 function clampEph(t: number): number {
   const r = ephRange.value;
   return r ? Math.min(Math.max(t, r[0]), r[1] - DAY) : t;
@@ -186,15 +196,15 @@ export function Timeline() {
             <option value={s.v}>{s.label}</option>
           ))}
         </select>
-        <label class="tl-field">
+        <label class="tl-field" onDblClick={openPicker}>
           <span>Time (UTC)</span>
           <input type="datetime-local" value={toInputValue(t)} onChange={(e) => (time.value = clampEph(fromInputValue((e.target as HTMLInputElement).value)))} />
         </label>
-        <label class="tl-field">
+        <label class="tl-field" onDblClick={openPicker}>
           <span>From</span>
           <input type="datetime-local" value={toInputValue(t0)} onChange={(e) => setInterval_(clampEph(fromInputValue((e.target as HTMLInputElement).value)), t1)} />
         </label>
-        <label class="tl-field">
+        <label class="tl-field" onDblClick={openPicker}>
           <span>To</span>
           <input type="datetime-local" value={toInputValue(t1)} onChange={(e) => setInterval_(t0, clampEph(fromInputValue((e.target as HTMLInputElement).value)))} />
         </label>

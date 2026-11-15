@@ -72,16 +72,23 @@ export default function PanoView() {
     };
     let lastHover = 0;
     const onHover = (e: PointerEvent) => {
-      const t = performance.now();
-      if (t - lastHover < 60) return;
-      lastHover = t;
       const r = el.getBoundingClientRect();
       const hit = scene.groundHit(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      scene.setMarker(scene.flying ? null : hit); // every move, so it sticks to the cursor; hidden in flight
+      dirty = true;
+      const t = performance.now();
+      if (t - lastHover < 60) return; // the text readout is throttled
+      lastHover = t;
       setHover(hit ? `${geoText(hit.x, hit.y)} · ${fmtDistance(hit.distanceTo(scene.pos))} away` : '');
     };
-    const onLeave = () => setHover('');
+    const onLeave = () => {
+      setHover('');
+      scene.setMarker(null);
+      dirty = true;
+    };
     const onMove = (e: PointerEvent) => {
       if (!drag || drag.id !== e.pointerId) return onHover(e);
+      scene.setMarker(null); // looking around: the world turns under a still cursor
       scene.yaw -= (e.clientX - drag.x) * 0.003;
       scene.pitch = Math.max(-1.4, Math.min(1.4, scene.pitch + (e.clientY - drag.y) * 0.003));
       drag.x = e.clientX;
@@ -94,6 +101,7 @@ export default function PanoView() {
       const hit = scene.pick(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       if (!hit) return;
       if (scene.geoAt(hit.x, hit.y).lat > -80) return; // outside the polar DEM: no horizon there
+      scene.setMarker(null); // hide before moving; it returns on the next mouse move after the flight
       scene.flyTo(hit, performance.now());
       setFlying(true);
       dirty = true;

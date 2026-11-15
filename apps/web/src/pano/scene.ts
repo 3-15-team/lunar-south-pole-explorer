@@ -295,6 +295,9 @@ export class PanoScene {
   private earth: THREE.Mesh;
   private stars: THREE.Points;
   private skirt: THREE.Mesh | null = null;
+  // cursor marker: small disc lying on the ground under the mouse, tilted with the slope
+  private marker: THREE.Group;
+  private markerAt: THREE.Vector2 | null = null;
   private farDeg: Float32Array | null = null;
   private meshCoord = new Float32Array(MESH_N);
   private meshH: Float32Array | null = null;
@@ -364,6 +367,20 @@ export class PanoScene {
     );
     this.stars = this.makeStars();
     this.scene.add(this.stars, this.sun, this.earth);
+    // Unit disc in the XY plane (normal +Z): translucent fill + brighter rim. Drawn on top: it sits
+    // on the first ground hit along the view ray, so terrain should not hide it.
+    const mat = (opacity: number) =>
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+    const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 40), mat(0.3));
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 40), mat(0.9));
+    for (const m of [fill, rim]) {
+      m.renderOrder = 10;
+      m.frustumCulled = false;
+    }
+    this.marker = new THREE.Group();
+    this.marker.add(fill, rim);
+    this.marker.visible = false;
+    this.scene.add(this.marker);
   }
 
   /**
@@ -836,6 +853,32 @@ export class PanoScene {
     return { lat, lon, h: Number.isFinite(h) ? h : this.site.hTerrain + this.heightAt(e, n) + (e * e + n * n) / (2 * R_MOON_M) };
   }
 
+  /** Show the cursor marker at ground point (e, n), or hide it (null). */
+  setMarker(at: THREE.Vector2 | null): void {
+    this.markerAt = at ? at.clone() : null;
+  }
+
+  /**
+   * Re-place the marker for the current camera: radius ~2.5% of the distance keeps it small and
+   * constant on screen; the disc lies along the local mesh slope.
+   */
+  private updateMarker(): void {
+    const p = this.markerAt;
+    this.marker.visible = !!p;
+    if (!p) return;
+    const h = this.meshHeightAt(p.x, p.y);
+    const at = new THREE.Vector3(p.x, h, -p.y);
+    const r = Math.max(0.15, this.camera.position.distanceTo(at) * 0.025);
+    // slope over the disc footprint; ENU normal (−∂h/∂e, −∂h/∂n, 1) → world (x = e, y = up, z = −n)
+    const d = Math.max(0.5, r);
+    const ge = (this.meshHeightAt(p.x + d, p.y) - this.meshHeightAt(p.x - d, p.y)) / (2 * d);
+    const gn = (this.meshHeightAt(p.x, p.y + d) - this.meshHeightAt(p.x, p.y - d)) / (2 * d);
+    const normal = new THREE.Vector3(-ge, 1, gn).normalize();
+    this.marker.position.copy(at);
+    this.marker.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+    this.marker.scale.setScalar(r);
+  }
+
   /** Start a smooth move to (e, n); advanced by stepFlight() each frame. */
   flyTo(target: THREE.Vector2, now: number): void {
     this.flight = { from: this.pos.clone(), to: target.clone(), t0: now };
@@ -895,6 +938,7 @@ export class PanoScene {
     const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
     this.camera.lookAt(this.camera.position.clone().add(dir));
     this.terrainMat.uniforms.uCam.value.copy(this.camera.position);
+    this.updateMarker();
     r.render(this.scene, this.camera);
   }
 

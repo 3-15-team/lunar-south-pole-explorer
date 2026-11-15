@@ -9,6 +9,8 @@ how much sunlight the site gets (power), when the Earth is visible (direct-to-Ea
 the longest night, and the time left until sunset and Earthset. Any number of scenarios can be compared
 side by side, including "what if the mission slips by N days".
 
+Live demo: https://spaceapp.dmitryklestov.site
+
 Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Browser*.
 
 ---
@@ -34,7 +36,8 @@ Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Brow
 | **Metric tiles** | Sunset/sunrise countdown, Earthset/Earthrise countdown, current visible fraction of each disc, interval illumination, longest darkness, DTE visibility and longest communications gap, vertical vs flat solar-panel output. |
 | **Scenario comparison** | Pin any number of site + interval scenarios; a "What if it slips?" slider (−30…+30 days) shows deltas and a plain-language verdict. |
 | **Date × site calendar** | Daily sunlight for 60 days for several sites; click a day to jump to it. |
-| **Best-spot search** | Finds the top locations in the current view, with **rank stability** under Monte-Carlo weight perturbation (robustness, not probability). |
+| **Best-spot search** | Finds the top locations in the current view (inside the 80°S coverage), with **rank stability** under Monte-Carlo weight perturbation (robustness, not probability). The score knows nothing about site catalogues, yet its automatic picks often land at or next to the LOLA 5 m sites NASA has already studied. |
+| **Antenna height analysis** | Set an antenna height (1–100 m) and see how tall the antenna must be to reach the Earth, as a distribution over time ("no link" above 1 km). The map's Earth-visibility and suitability layers can be recomputed for the antenna on demand. |
 | **Region overview** | Region-wide suitability heatmap from the compute server; falls back to pre-computed maps if the server is offline. |
 | **First-person panorama** | Stand on 5 m LOLA terrain: Sun and Earth at true angular size (Earth with correct phase), soft terrain shadows, a rotating star field, WASD walking. |
 | **Intro fly-in** | A 9-second, skippable fly-in to the pole, lit by the actual Sun direction; respects "reduced motion". |
@@ -47,8 +50,8 @@ Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Brow
    with NASA/JPL SPICE (DE440 planetary ephemeris and the lunar orientation kernels) for 2026–2036 every
    30 minutes (~4 MB in total). The browser interpolates and corrects for the observer's position on the
    surface (topocentric parallax matters for the Earth: up to 0.26°).
-2. **Terrain.** LOLA digital elevation models (80 m and 40 m for 80°S–90°S, 5 m around ten candidate
-   sites) are converted into a tile pyramid in south polar stereographic projection (5 m to 2560 m per
+2. **Terrain.** LOLA digital elevation models (80 m and 40 m for 80°S–90°S, 5 m around the
+   LOLA 5 m candidate sites) are converted into a tile pyramid in south polar stereographic projection (5 m to 2560 m per
    pixel, ~1 GB).
 3. **Horizon.** For each site, rays are marched across the terrain up to 300 km in 1440 directions,
    using exact spherical geometry (Moon curvature included) and coarser terrain at larger distances.
@@ -59,7 +62,11 @@ Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Brow
    sunsets, Earth visibility %, communication windows, panel output. Events (sunset, Earthrise …) are
    refined to one minute.
 6. **Map layers on the GPU.** For the visible map area, horizons are computed per pixel in 64
-   directions on the graphics card; the interval integrals are then evaluated per pixel.
+   directions on the graphics card; the interval integrals are then evaluated per pixel. A second
+   GPU pass at the antenna height runs only on request.
+   **Antenna height.** Per azimuth, the upper envelope of the lines `Z − D·tan e` over all terrain
+   points gives the exact horizon at any height and the height needed to see a given elevation
+   (log bisection, capped at 1 km).
 7. **Suitability.** A transparent multi-criteria score: hard slope limit plus weighted terms for
    sunlight, longest night, Earth contact, slope and roughness. Two presets: *short lander mission* and
    *long-term base*. No trained model is used — every term is documented in `docs/METRICS.md`.
@@ -98,6 +105,8 @@ Details: `docs/VALIDATION.md`.
 **Infrastructure**
 - Docker Compose: nginx (web app + static data) and the compute service; an optional `texgen` service (disabled)
 - Makefile for setup, data, development, testing, Docker and a provider-agnostic deploy hook
+- One-command setup: `make bootstrap` (dependencies, data download with per-file progress, `make up`, smoke test)
+- One-command deploy to a droplet / any Ubuntu VM: `make droplet` (`make up` behind Caddy with automatic HTTPS)
 - Static-hosting fallback: the core works without any server
 
 **Data (NASA, public domain)**
@@ -163,6 +172,8 @@ Surface micro-texture, the intro Moon, the star field and the Earth pattern are 
 - Drag to look around; `W A S D` or arrow keys walk at 5 m/s, `Shift` moves at 25 m/s; double-click the ground or a mountain to move there in 1 s (up to ~10 km from the site).
 - **Height above surface** (bottom-right button → vertical slider, 1–100 m, log scale): camera / solar array /
   mast height; raising it often adds hours of sunlight. Also drives the Sun metrics and the map layers.
+- **Antenna height** (separate slider, 1–100 m): the Earth horizon, the sky plot's dashed antenna line and
+  the antenna analysis panel use it.
 - The HUD shows the sunset/sunrise and Earthset/Earthrise countdowns, current elevations and visible
   fractions; the compass shows your heading.
 - **Enhanced / Realistic** as on the map; **← Map** returns to the map.
@@ -197,6 +208,8 @@ make setup      # Python environment + npm install
 make data-min   # minimal data set (or `make data` for everything)
 make dev        # http://localhost:5173 (+ compute API on :8000)
 make up         # Docker: http://localhost:8642 — the primary demo
+make bootstrap  # from a clean clone: setup + data + up + smoke in one command
+make droplet    # deploy to a VM with HTTPS (settings in git-ignored .deploy.env)
 ```
 
 Code licence: Apache-2.0.

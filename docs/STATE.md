@@ -7,7 +7,7 @@
 ## Phase & tasks
 
 P0 — bootstrap
-- [x] T-001 docs skeleton + ADRs + kickoff copy (`docs/KICKOFF_PROMPT.md`)
+- [x] T-001 docs skeleton + ADRs + kickoff copy
 - [x] T-002 data downloads — all tier 0/1 sources incl. 40 m DEM, 80 m error map, 10 PGDA 5 m sites (+ error maps)
 - [x] T-003 Makefile + infra (compose, Dockerfiles, nginx, deploy hooks, doctor/verify/smoke/dist scripts)
 - [x] T-004 Trek WMTS checked (ADR-018): hillshade layer with CORS exists; not used (baked shadows)

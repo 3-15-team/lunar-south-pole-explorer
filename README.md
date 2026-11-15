@@ -1,5 +1,7 @@
 # Lunar South Pole Site Explorer
 
+**Live demo: https://spaceapp.dmitryklestov.site**
+
 **Is this landing site and date viable — and what changes if the date slips?**
 A web app for the NASA Space Apps 2026 challenge *CLPS Lunar Mission Browser*: pick a south-polar
 site (catalogue or any coordinates) and a date, see the Sun and the Earth against the **real

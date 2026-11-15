@@ -769,8 +769,13 @@ export class TerrainEngine {
     }
     const all: { i: number; s: number }[] = [];
     const sc = new Float32Array(g.nx * g.ny).fill(-1);
+    // only inside the high-res polar coverage (the 80°S circle); the grid is its bounding square
+    const R2 = this.dem.maxRho * this.dem.maxRho;
     for (let k = 0; k < g.nx * g.ny; k++) {
       if (A[k * 4] < 0 || F[k * 4 + 3] <= -10000) continue;
+      const cx = g.x0 + ((k % g.nx) + 0.5) * g.sp;
+      const cy = g.yTop - (Math.floor(k / g.nx) + 0.5) * g.sp;
+      if (cx * cx + cy * cy > R2) continue;
       const f: Features = { illum: A[k * 4], earth: A[k * 4 + 1], dark: A[k * 4 + 2], slopeMax: F[k * 4], slopeMean: F[k * 4 + 1], relief: F[k * 4 + 2] };
       const s = score(f, p.weights, p.footprint, p.slopeLimit, p.darkRef);
       sc[k] = s;

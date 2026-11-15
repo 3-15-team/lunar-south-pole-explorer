@@ -1,11 +1,13 @@
 // Panorama mode (lazy). Uses the shared store: site, time, observer height, lighting.
 import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, services, siteResult, time } from '../state/store';
+import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, services, siteRef, siteResult, time } from '../state/store';
+import { customFromXY } from '../data/sites';
 import { config } from '../config';
+import { formatLatLon } from '../core/geo';
 import { countdownMs } from '../state/countdown';
-import { fmtCountdown, fmtDate, fmtDeg, fmtPct } from '../ui/format';
-import { PanoScene } from './scene';
+import { fmtCountdown, fmtDate, fmtDeg, fmtDistance, fmtPct } from '../ui/format';
+import { FAST_SPEED, PanoScene, WALK_SPEED } from './scene';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
@@ -16,6 +18,10 @@ export default function PanoView() {
   const [heading, setHeading] = useState(0);
   const [micro, setMicro] = useState(false);
   const [microMissing, setMicroMissing] = useState(false);
+  const [here, setHere] = useState('');
+  const [hover, setHover] = useState('');
+  // view direction to restore after a double-click move rebuilds the scene at the new site
+  const carryView = useRef<{ heading: [number, number]; pitch: number } | null>(null);
   const sr = siteResult.value;
 
   useEffect(() => {
@@ -39,8 +45,22 @@ export default function PanoView() {
       el.setPointerCapture(e.pointerId);
       el.focus();
     };
+    const geoText = (e: number, n: number) => {
+      const g = scene.geoAt(e, n);
+      return `${formatLatLon(g.lat, g.lon, 3)} · ${Math.round(g.h)} m`;
+    };
+    let lastHover = 0;
+    const onHover = (e: PointerEvent) => {
+      const t = performance.now();
+      if (t - lastHover < 60) return;
+      lastHover = t;
+      const r = el.getBoundingClientRect();
+      const hit = scene.groundHit(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      setHover(hit ? `${geoText(hit.x, hit.y)} · ${fmtDistance(hit.distanceTo(scene.pos))} away` : '');
+    };
+    const onLeave = () => setHover('');
     const onMove = (e: PointerEvent) => {
-      if (!drag || drag.id !== e.pointerId) return;
+      if (!drag || drag.id !== e.pointerId) return onHover(e);
       scene.yaw -= (e.clientX - drag.x) * 0.003;
       scene.pitch = Math.max(-1.4, Math.min(1.4, scene.pitch + (e.clientY - drag.y) * 0.003));
       drag.x = e.clientX;
@@ -48,6 +68,21 @@ export default function PanoView() {
       dirty = true;
     };
     const onUp = () => (drag = null);
+    const onDblClick = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      const hit = scene.pick(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      if (!hit) return;
+      if (scene.geoAt(hit.x, hit.y).lat > -80) return; // outside the polar DEM: no horizon there
+      scene.flyTo(hit, performance.now());
+      dirty = true;
+    };
+    // Arriving makes the spot the selected site, so the horizon, metrics and right panel follow.
+    // The scene is then rebuilt around it (sr.key changes); keep the view direction across that.
+    scene.onArrive = (to) => {
+      carryView.current = { heading: scene.gridHeading(), pitch: scene.pitch };
+      const [x, y] = scene.toGrid(to.x, to.y);
+      siteRef.value = customFromXY(x, y);
+    };
     const KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
     const onKey = (e: KeyboardEvent) => {
       if (/INPUT|SELECT|TEXTAREA/.test((e.target as HTMLElement)?.tagName)) return;
@@ -62,6 +97,8 @@ export default function PanoView() {
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
+    el.addEventListener('dblclick', onDblClick);
+    el.addEventListener('pointerleave', onLeave);
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
     const blur = () => keys.clear();
@@ -95,9 +132,10 @@ export default function PanoView() {
       const f = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
       const s = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
       if (f || s) {
+        scene.cancelFlight();
         scene.move(f, s, dt, keys.has('shift'));
         dirty = true;
-      }
+      } else if (scene.stepFlight(now)) dirty = true;
       if (!dirty || document.hidden) return;
       dirty = false;
       const w = wrap.current?.clientWidth ?? 800;
@@ -105,6 +143,8 @@ export default function PanoView() {
       scene.update(time.peek(), lighting.peek() === 'enhanced' ? 0.05 : 0);
       scene.render(w, h);
       setHeading(scene.state.heading);
+      const off = scene.pos.length();
+      setHere(`${geoText(scene.pos.x, scene.pos.y)} · ${off < 1 ? 'at the site' : `${fmtDistance(off)} from the site`}`);
     };
 
     scene
@@ -112,7 +152,12 @@ export default function PanoView() {
       .then(() => {
         if (disposed) return;
         scene.update(time.peek(), 0.035);
-        scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
+        const carry = carryView.current;
+        carryView.current = null;
+        if (carry) {
+          scene.setGridHeading(carry.heading);
+          scene.pitch = carry.pitch;
+        } else scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
         setMsg('');
         raf = requestAnimationFrame(loop);
       })
@@ -137,7 +182,7 @@ export default function PanoView() {
   const earthUp = now ? now.fEarth >= dte.value : false;
   return (
     <div class="pano fade-in" ref={wrap}>
-      <canvas ref={canvas} tabIndex={0} aria-label="First-person view of the lunar surface. Drag to look around, W A S D to walk, Shift to move fast." />
+      <canvas ref={canvas} tabIndex={0} aria-label="First-person view of the lunar surface. Drag to look around, double-click the ground or a mountain to move there, W A S D to walk, Shift to move fast." />
       <div class="compass" aria-hidden="true">
         {COMPASS[Math.round(heading / 45) % 8]} {Math.round(heading)}°
       </div>
@@ -184,8 +229,14 @@ export default function PanoView() {
           ← Map
         </button>
       </div>
+      {!msg && (
+        <div class="pano-coords">
+          <div class="readout">You: {here}</div>
+          <div class="readout">{hover ? `Cursor: ${hover}` : 'Move the cursor over the terrain'}</div>
+        </div>
+      )}
       {msg && <div class="loading">{msg}</div>}
-      <div class="pano-help">Drag to look · WASD walk 1.4 m/s · Shift 25 m/s · LOLA 5–20 m terrain{micro ? ' + synthetic sub-DEM relief (statistical crater/boulder model, not imagery)' : ', procedural (synthetic) surface texture'}</div>
+      <div class="pano-help">Drag to look · Double-click to go there · WASD walk {WALK_SPEED} m/s · Shift {FAST_SPEED} m/s · LOLA 5–20 m terrain{micro ? ' + synthetic sub-DEM relief (statistical crater/boulder model, not imagery)' : ', procedural (synthetic) surface texture'}</div>
     </div>
   );
 }

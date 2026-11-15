@@ -99,7 +99,7 @@ Other useful targets (`make help` lists all):
 | `make deploy DEPLOY_TARGET=static\|gcp\|azure` | provider-agnostic hooks (stubs; nothing runs until configured) |
 
 Keyboard: `Space` play/pause · `←/→` ±1 h (`Shift` ±1 day) on the playhead · `M` map · `P` panorama ·
-in the panorama `W A S D` walk (1.4 m/s, `Shift` 25 m/s), drag to look.
+in the panorama `W A S D` walk (5 m/s, `Shift` 25 m/s), drag to look, double-click the ground or a mountain to move there.
 
 ## Continuous integration
 

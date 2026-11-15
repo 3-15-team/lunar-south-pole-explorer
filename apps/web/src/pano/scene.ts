@@ -4,7 +4,7 @@
 // procedural stars rotating with the Moon, procedural regolith texture (labelled synthetic).
 import * as THREE from 'three';
 import type { Ephemeris } from '../core/ephemeris';
-import { EARTH_RADIUS_KM, R_MOON_KM, R_MOON_M, SUN_RADIUS_KM, AU_KM, enuAt, latLonToUnit, type Enu } from '../core/geo';
+import { EARTH_RADIUS_KM, R_MOON_KM, R_MOON_M, SUN_RADIUS_KM, AU_KM, enuAt, latLonToUnit, xyToLatLon, type Enu } from '../core/geo';
 import type { HorizonProfile } from '../core/horizon';
 import { inflateIfGzip, type DemClient } from '../data/dem';
 import { mulberry32 } from '../core/suitability';
@@ -21,6 +21,14 @@ export interface PanoSite {
 const FINE_N = 1024;
 const COARSE_N = 1024;
 const SKY_D = 50000;
+/** WASD speeds, m/s (normal / with Shift). */
+export const WALK_SPEED = 5;
+export const FAST_SPEED = 25;
+/** Duration of the double-click "fly to point" move. */
+export const FLY_TO_DURATION_MS = 1000;
+// terrain mesh: MESH_N² vertices, sinh-spaced (dense at the site, sparse towards the edge)
+const MESH_N = 640;
+const MESH_A = 4.2;
 
 const terrainVert = /* glsl */ `
 varying vec3 vPos;
@@ -287,6 +295,10 @@ export class PanoScene {
   private earth: THREE.Mesh;
   private stars: THREE.Points;
   private skirt: THREE.Mesh | null = null;
+  private farDeg: Float32Array | null = null;
+  private meshCoord = new Float32Array(MESH_N);
+  private meshH: Float32Array | null = null;
+  private flight: { from: THREE.Vector2; to: THREE.Vector2; t0: number } | null = null;
   eyeHeight = 2;
   yaw = 0;
   pitch = 0.02;
@@ -379,7 +391,7 @@ export class PanoScene {
   }
 
   /** SPS grid coordinates of local (e, n). */
-  private toGrid(e: number, n: number): [number, number] {
+  toGrid(e: number, n: number): [number, number] {
     return [this.site.x + this.k * (e * this.eG[0] + n * this.nG[0]), this.site.y + this.k * (e * this.eG[1] + n * this.nG[1])];
   }
 
@@ -465,6 +477,45 @@ export class PanoScene {
     return (data[i] * (1 - wx) + data[i + 1] * wx) * (1 - wy) + (data[i + N] * (1 - wx) + data[i + N + 1] * wx) * wy;
   }
 
+  private get meshHalf(): number {
+    return this.coarseHalf * 0.98;
+  }
+
+  /** Half-size of the area the viewer may walk / fly in (the whole terrain mesh, minus a margin). */
+  private get walkLimit(): number {
+    return this.meshHalf - 200;
+  }
+
+  /** Mesh cell index and in-cell fraction along one axis (inverse of the sinh spacing). */
+  private meshCell(x: number): [number, number] {
+    const N = MESH_N;
+    const f = ((Math.asinh((x / this.meshHalf) * Math.sinh(MESH_A)) / MESH_A + 1) * (N - 1)) / 2;
+    const i = Math.max(0, Math.min(N - 2, Math.floor(f)));
+    const c0 = this.meshCoord[i];
+    const c1 = this.meshCoord[i + 1];
+    return [i, Math.min(1, Math.max(0, (x - c0) / (c1 - c0)))];
+  }
+
+  /** Height of the rendered (triangulated) mesh — what the user actually sees and clicks. */
+  meshHeightAt(e: number, n: number): number {
+    const H = this.meshH;
+    if (!H) return this.heightAt(e, n);
+    const N = MESH_N;
+    const [i, u] = this.meshCell(e);
+    const [j, v] = this.meshCell(n);
+    const h00 = H[j * N + i];
+    const h10 = H[j * N + i + 1];
+    const h01 = H[(j + 1) * N + i];
+    const h11 = H[(j + 1) * N + i + 1];
+    // same diagonal split as the index buffer in makeTerrainMesh: (00,10,01) + (10,11,01)
+    return u + v <= 1 ? h00 + u * (h10 - h00) + v * (h01 - h00) : h11 + (1 - u) * (h01 - h11) + (1 - v) * (h10 - h11);
+  }
+
+  /** Ground under the eye: never below the drawn mesh (sparse far cells can bulge above the DEM). */
+  groundAt(e: number, n: number): number {
+    return Math.max(this.heightAt(e, n), this.meshHeightAt(e, n));
+  }
+
   async build(onProgress?: (msg: string) => void): Promise<void> {
     onProgress?.('Loading 5 m terrain…');
     this.fine = await this.sampleField(this.fineHalf, FINE_N, (f) => onProgress?.(`Loading near terrain ${Math.round(f * 100)}%`));
@@ -473,6 +524,7 @@ export class PanoScene {
     u.uFine.value = PanoScene.tex(this.fine, FINE_N);
     u.uCoarse.value = PanoScene.tex(this.coarse, COARSE_N);
     const far = this.profile.elevFar ?? this.profile.elev;
+    this.farDeg = far;
     const farRad = new Float32Array(far.length);
     for (let i = 0; i < far.length; i++) farRad[i] = (far[i] * Math.PI) / 180;
     const ft = new THREE.DataTexture(farRad, far.length, 1, THREE.RedFormat, THREE.FloatType);
@@ -488,21 +540,25 @@ export class PanoScene {
   }
 
   private makeTerrainMesh(): THREE.Mesh {
-    const N = 640;
-    const S = this.coarseHalf * 0.98;
-    const a = 4.2;
-    const coord = (i: number) => (S * Math.sinh(a * ((2 * i) / (N - 1) - 1))) / Math.sinh(a);
+    const N = MESH_N;
+    const S = this.meshHalf;
+    const a = MESH_A;
+    const coord = this.meshCoord;
+    for (let i = 0; i < N; i++) coord[i] = (S * Math.sinh(a * ((2 * i) / (N - 1) - 1))) / Math.sinh(a);
     const pos = new Float32Array(N * N * 3);
+    const mh = new Float32Array(N * N);
     for (let j = 0; j < N; j++) {
-      const n = coord(j);
+      const n = coord[j];
       for (let i = 0; i < N; i++) {
-        const e = coord(i);
+        const e = coord[i];
         const k = (j * N + i) * 3;
+        mh[j * N + i] = this.heightAt(e, n);
         pos[k] = e;
-        pos[k + 1] = this.heightAt(e, n);
+        pos[k + 1] = mh[j * N + i];
         pos[k + 2] = -n;
       }
     }
+    this.meshH = mh;
     const idx = new Uint32Array((N - 1) * (N - 1) * 6);
     let p = 0;
     for (let j = 0; j < N - 1; j++)
@@ -683,16 +739,129 @@ export class PanoScene {
     };
   }
 
-  /** Walk on the terrain (clamped to the 5 m field). */
+  /** Walk on the terrain (clamped to the terrain mesh; 5 m detail near the site, 20 m beyond). */
   move(forward: number, strafe: number, dt: number, fast: boolean): void {
-    const v = (fast ? 25 : 1.4) * dt;
+    const v = (fast ? FAST_SPEED : WALK_SPEED) * dt;
     const fx = Math.sin(this.yaw);
     const fy = Math.cos(this.yaw);
     this.pos.x += (fx * forward + fy * strafe) * v;
     this.pos.y += (fy * forward - fx * strafe) * v;
-    const lim = this.fineHalf - 50;
-    this.pos.x = Math.max(-lim, Math.min(lim, this.pos.x));
-    this.pos.y = Math.max(-lim, Math.min(lim, this.pos.y));
+    this.pos.clampScalar(-this.walkLimit, this.walkLimit);
+  }
+
+  /**
+   * Ground point (e, n) under normalized device coords, clamped to the walkable area, or null
+   * for sky. The mesh is shaded in a custom shader and far mountains are a silhouette ring, so
+   * we ray-march the mesh heights on the CPU instead of raycasting geometry. A click on the
+   * far-horizon silhouette (mountains beyond the mesh) heads towards it up to the walk limit.
+   */
+  pick(ndcX: number, ndcY: number): THREE.Vector2 | null {
+    const lim = this.walkLimit;
+    const hit = this.groundHit(ndcX, ndcY);
+    if (hit) return hit.clampScalar(-lim, lim);
+    const cam = this.camera;
+    const o = cam.position;
+    const d = this.rayDir(ndcX, ndcY);
+    // no mesh hit: is the ray below the far-horizon silhouette at this azimuth?
+    const far = this.farDeg;
+    if (!far) return null;
+    const az = (Math.atan2(d.x, -d.z) / (2 * Math.PI) + 1) % 1;
+    const fi = az * far.length;
+    const i0 = Math.floor(fi) % far.length;
+    // same −60° floor as the ring in makeSkirt()
+    const farEl = Math.max(-60, far[i0] + (far[(i0 + 1) % far.length] - far[i0]) * (fi - Math.floor(fi)));
+    if ((Math.asin(d.y) * 180) / Math.PI > farEl) return null;
+    // walk towards it: horizontal direction until the edge of the walkable square
+    const h = new THREE.Vector2(d.x, -d.z).normalize();
+    const p0 = new THREE.Vector2(o.x, -o.z);
+    const reach = (p: number, v: number) => (Math.abs(v) < 1e-9 ? Infinity : ((v > 0 ? lim : -lim) - p) / v);
+    const t = Math.max(0, Math.min(reach(p0.x, h.x), reach(p0.y, h.y)));
+    return p0.addScaledVector(h, t).clampScalar(-lim, lim);
+  }
+
+  private rayDir(ndcX: number, ndcY: number): THREE.Vector3 {
+    const cam = this.camera;
+    cam.updateMatrixWorld();
+    return new THREE.Vector3(ndcX, ndcY, 0.5).unproject(cam).sub(cam.position).normalize();
+  }
+
+  /** First intersection (e, n) of the view ray with the terrain mesh, unclamped; null if none. */
+  groundHit(ndcX: number, ndcY: number): THREE.Vector2 | null {
+    const d = this.rayDir(ndcX, ndcY);
+    const o = this.camera.position;
+    const at = (s: number) => new THREE.Vector2(o.x + d.x * s, -(o.z + d.z * s));
+    const above = (s: number) => {
+      const p = at(s);
+      return o.y + d.y * s - this.meshHeightAt(p.x, p.y);
+    };
+    const half = this.meshHalf;
+    let s0 = 0;
+    for (let s = 0.5; ; s += Math.max(0.5, s * 0.005)) {
+      const p = at(s);
+      if (Math.abs(p.x) > half || Math.abs(p.y) > half) break;
+      if (above(s) > 0) {
+        s0 = s;
+        continue;
+      }
+      // bisect between the last sample above ground and the first one below
+      let a = s0;
+      let b = s;
+      for (let i = 0; i < 24; i++) {
+        const m = (a + b) / 2;
+        if (above(m) > 0) a = m;
+        else b = m;
+      }
+      return at(b);
+    }
+    return null;
+  }
+
+  /** Selenographic position and DEM elevation (m) of local (e, n). */
+  geoAt(e: number, n: number): { lat: number; lon: number; h: number } {
+    const [x, y] = this.toGrid(e, n);
+    const { lat, lon } = xyToLatLon(x, y);
+    const h = this.dem.height(x, y, 5);
+    return { lat, lon, h: Number.isFinite(h) ? h : this.site.hTerrain + this.heightAt(e, n) + (e * e + n * n) / (2 * R_MOON_M) };
+  }
+
+  /** Start a smooth move to (e, n); advanced by stepFlight() each frame. */
+  flyTo(target: THREE.Vector2, now: number): void {
+    this.flight = { from: this.pos.clone(), to: target.clone(), t0: now };
+  }
+
+  cancelFlight(): void {
+    this.flight = null;
+  }
+
+  /** Advance an active flight; returns true while the view is changing. */
+  stepFlight(now: number): boolean {
+    const f = this.flight;
+    if (!f) return false;
+    const u = Math.min(1, Math.max(0, (now - f.t0) / FLY_TO_DURATION_MS));
+    const k = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; // ease-in-out cubic
+    this.pos.lerpVectors(f.from, f.to, k);
+    if (u >= 1) {
+      this.flight = null;
+      this.onArrive?.(f.to.clone());
+    }
+    return true;
+  }
+
+  /** Called once when a flyTo() completes (not when cancelled). */
+  onArrive?: (to: THREE.Vector2) => void;
+
+  /**
+   * View heading as a unit vector in SPS grid coordinates. Local north turns quickly with
+   * position near the pole, so this is what carries "the same direction" between sites.
+   */
+  gridHeading(): [number, number] {
+    const s = Math.sin(this.yaw);
+    const c = Math.cos(this.yaw);
+    return [s * this.eG[0] + c * this.nG[0], s * this.eG[1] + c * this.nG[1]];
+  }
+
+  setGridHeading(g: [number, number]): void {
+    this.yaw = Math.atan2(g[0] * this.eG[0] + g[1] * this.eG[1], g[0] * this.nG[0] + g[1] * this.nG[1]);
   }
 
   render(width: number, height: number): void {
@@ -703,7 +872,7 @@ export class PanoScene {
       this.camera.aspect = width / Math.max(1, height);
       this.camera.updateProjectionMatrix();
     }
-    const h = this.heightAt(this.pos.x, this.pos.y);
+    const h = this.groundAt(this.pos.x, this.pos.y);
     this.camera.position.set(this.pos.x, h + this.eyeHeight, -this.pos.y);
     const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
     this.camera.lookAt(this.camera.position.clone().add(dir));

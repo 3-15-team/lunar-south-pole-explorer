@@ -161,7 +161,7 @@ Surface micro-texture, the intro Moon, the star field and the Earth pattern are 
 - Bottom left: coordinates, height and layer values under the cursor, plus computation progress.
 
 ### Centre: panorama
-- Drag to look around; `W A S D` or arrow keys walk at 1.4 m/s, `Shift` moves at 25 m/s.
+- Drag to look around; `W A S D` or arrow keys walk at 5 m/s, `Shift` moves at 25 m/s; double-click the ground or a mountain to move there in 1 s (up to ~10 km from the site).
 - The HUD shows the sunset/sunrise and Earthset/Earthrise countdowns, current elevations and visible
   fractions; the compass shows your heading.
 - **Enhanced / Realistic** as on the map; **← Map** returns to the map.

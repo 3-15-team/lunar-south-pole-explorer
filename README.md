@@ -30,6 +30,18 @@ make bootstrap DATA=min   # data-min instead of data (~0.4 GB download instead o
 Re-running is cheap: dependencies reinstall only when requirement files change, downloads are
 skipped when already in `data/manifest.json`, data jobs skip finished products.
 
+## Deploy to a droplet (DigitalOcean or any Ubuntu VM)
+
+```bash
+make data                                                  # once, locally (the droplet never downloads from NASA)
+make deploy DEPLOY_TARGET=droplet DROPLET=root@203.0.113.7  # → https://203.0.113.7.nip.io
+make deploy DEPLOY_TARGET=droplet DROPLET=root@203.0.113.7 DOMAIN=lunar.example.org   # own domain (DNS A record → droplet IP)
+```
+
+Installs Docker if needed, copies the code and `data/web` + `data/work`, runs `make up` bound to
+127.0.0.1:8642 and puts **Caddy** in front (automatic Let's Encrypt HTTPS, ports 80/443). Re-run the
+same command to update; only changed data is re-sent. Recommended size: 2 vCPU / 4 GB / 80 GB.
+
 ## Quick start
 
 Prerequisites: Node ≥ 20, Python 3.12, (optional) Docker; ~3 GB free disk for the minimal data set.

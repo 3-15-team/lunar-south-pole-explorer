@@ -105,7 +105,10 @@ input[type='range'] { accent-color: var(--accent); }
 .notice.small { font-size: 12px; padding: 6px 8px; margin: 6px 0; }
 .search { width: 100%; margin-bottom: 8px; }
 .site-list { max-height: 38vh; overflow-y: auto; margin: 0 -4px; }
-.site-group-title { font-size: 11px; color: var(--muted); margin: 8px 4px 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+.site-group-title { display: flex; align-items: center; gap: 4px; width: calc(100% - 8px); background: none; border: none; padding: 0; cursor: pointer; text-align: left; font-size: 11px; color: var(--muted); margin: 8px 4px 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+.site-group-title:hover { color: var(--text); }
+.site-group-title .disclosure { width: 12px; font-size: 13px; line-height: 1; letter-spacing: 0; }
+.site-group-count { margin-left: auto; font-family: var(--mono); letter-spacing: 0; }
 .site-item { display: block; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; padding: 5px 6px; cursor: pointer; }
 .site-item:hover { background: var(--panel-2); }
 .site-item.active { border-color: var(--accent); background: #1d1a10; }

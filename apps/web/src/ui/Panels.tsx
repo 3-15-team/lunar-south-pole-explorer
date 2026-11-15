@@ -70,8 +70,28 @@ function HeightSlider(props: { value: Signal<number>; label: string; title: stri
 
 const ORDER: SiteKind[] = ['pgda-5m', 'artemis', 'clps', 'mission', 'reference'];
 
+// Collapsed catalogue groups: a per-browser layout preference (localStorage, not the URL).
+const GROUPS_KEY = 'lspe.sites.collapsed';
+function loadCollapsed(): SiteKind[] {
+  try {
+    return JSON.parse(localStorage.getItem(GROUPS_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
 export function SitePanel() {
   const [q, setQ] = useState('');
+  const [collapsed, setCollapsed] = useState<SiteKind[]>(loadCollapsed);
+  const toggleGroup = (k: SiteKind) => {
+    const next = collapsed.includes(k) ? collapsed.filter((c) => c !== k) : [...collapsed, k];
+    setCollapsed(next);
+    try {
+      localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+    } catch {
+      /* storage unavailable: keep in-memory only */
+    }
+  };
   const [coord, setCoord] = useState('');
   const [coordErr, setCoordErr] = useState('');
   const cur = site.value;
@@ -92,10 +112,17 @@ export function SitePanel() {
       {catalogFallback.value && <div class="notice small">Catalogue file missing — showing built-in reference points.</div>}
       <input class="search" type="search" placeholder="Search sites…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Search sites" />
       <div class="site-list" role="listbox" aria-label="Site catalogue">
-        {groups.map((g) => (
+        {groups.map((g) => {
+          // a search shows every match, so collapsing applies only to the unfiltered list
+          const shut = !q && collapsed.includes(g.k);
+          return (
           <div class="site-group">
-            <div class="site-group-title">{KIND_LABEL[g.k]}</div>
-            {g.items.map((s) => {
+            <button type="button" class="site-group-title" aria-expanded={!shut} onClick={() => toggleGroup(g.k)}>
+              <span class="disclosure" aria-hidden="true">{shut ? '▸' : '▾'}</span>
+              {KIND_LABEL[g.k]}
+              {shut && <span class="site-group-count">{g.items.length}</span>}
+            </button>
+            {!shut && g.items.map((s) => {
               const active = cur?.id === s.id;
               const out = s.inCoverage === false;
               return (
@@ -111,7 +138,8 @@ export function SitePanel() {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </div>
       <form class="coord-form" onSubmit={submit}>
         <label for="coord">Custom coordinates</label>

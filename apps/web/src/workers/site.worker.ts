@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 // Site path (docs/ARCHITECTURE.md): horizon profile + interval metrics off the UI thread.
-import { Ephemeris, makeSiteFrame } from '../core/ephemeris';
+import { ANT_CAP_M, ANT_MIN_M, hullProfile, neededHeight, type AntennaSeries } from '../core/antenna';
+import { earthTopo, Ephemeris, makeSiteFrame } from '../core/ephemeris';
 import { xyToLatLon } from '../core/geo';
 import { computeHorizon, marchSteps, type HorizonProfile } from '../core/horizon';
 import {
@@ -27,23 +28,54 @@ async function init(dataBase: string): Promise<{ ephStart: number; ephEnd: numbe
   return { ephStart: eph.startMs, ephEnd: eph.endMs };
 }
 
-async function profile(key: string, x: number, y: number, hObs: number, naz: number): Promise<ProfileResult> {
+/** Horizon march (+ envelopes) per site and observer height; the antenna height only re-derives. */
+const bases = new Map<string, { p: HorizonProfile; tiles: number; msLoad: number; msCalc: number }>();
+const MAX_BASES = 24;
+
+async function profile(key: string, x: number, y: number, hObs: number, naz: number, hAnt: number): Promise<ProfileResult> {
   if (!dem || !eph) throw new Error('worker not initialised');
-  const zf = dem.finestLevelAt(x, y);
-  if (zf < 0) throw new Error('Outside DEM coverage');
-  const steps = marchSteps(dem.res(zf), 0.01, 300e3);
-  const tiles = dem.tilesForHorizon(x, y, steps, naz);
-  const t0 = performance.now();
-  await dem.loadAll(tiles, 8, 'dem', (done, total) => {
-    if (done % 8 === 0 || done === total) post({ type: 'progress', key, done, total });
-  });
-  await dem.loadAll(dem.errTilesFor(tiles), 8, 'err');
-  const tLoad = performance.now() - t0;
-  const p = computeHorizon(dem, x, y, { naz, hObs, farFrom: 2500 });
-  const tCalc = performance.now() - t0 - tLoad;
+  const bk = `${Math.round(x)}:${Math.round(y)}:${hObs}:${naz}`;
+  let base = bases.get(bk);
+  if (!base) {
+    const zf = dem.finestLevelAt(x, y);
+    if (zf < 0) throw new Error('Outside DEM coverage');
+    const steps = marchSteps(dem.res(zf), 0.01, 300e3);
+    const tiles = dem.tilesForHorizon(x, y, steps, naz);
+    const t0 = performance.now();
+    await dem.loadAll(tiles, 8, 'dem', (done, total) => {
+      if (done % 8 === 0 || done === total) post({ type: 'progress', key, done, total });
+    });
+    await dem.loadAll(dem.errTilesFor(tiles), 8, 'err');
+    const msLoad = performance.now() - t0;
+    const p = computeHorizon(dem, x, y, { naz, hObs, farFrom: 2500, hull: true });
+    base = { p, tiles: tiles.length, msLoad, msCalc: performance.now() - t0 - msLoad };
+    if (bases.size >= MAX_BASES) bases.delete(bases.keys().next().value as string);
+    bases.set(bk, base);
+  }
+  const b = base.p;
+  // Earth link horizon from the antenna (exact, from the envelopes); same as elev when equal
+  const elevEarth = hAnt === hObs || !b.hull ? undefined : hullProfile(b.hull, hAnt);
+  const p: HorizonProfile = { ...b, elevEarth, hAnt };
   const frame = makeSiteFrame(p.lat, p.lon, p.hTerrain, hObs);
   sites.set(key, { frame, profile: p, eph });
-  return { key, profile: p, tiles: tiles.length, msLoad: tLoad, msCalc: tCalc };
+  const { hull: _hull, ...shown } = p; // envelopes stay in the worker
+  return { key, profile: shown, tiles: base.tiles, msLoad: base.msLoad, msCalc: base.msCalc };
+}
+
+/** Needed antenna height over [t0, t1] at ≤ n evenly spaced times (core/antenna.ts). */
+function antennaSeries(ctx: SiteContext, t0: number, t1: number, dte: number, n = 1200): AntennaSeries | null {
+  const hull = ctx.profile.hull;
+  if (!hull || !eph) return null;
+  const k = Math.max(2, Math.min(n, Math.round((t1 - t0) / (10 * 60e3)) + 1));
+  const t = new Float64Array(k);
+  const need = new Float32Array(k);
+  const v = new Float64Array(6);
+  for (let i = 0; i < k; i++) {
+    t[i] = t0 + ((t1 - t0) * i) / (k - 1);
+    const e = earthTopo(ctx.frame, eph.at(t[i], v));
+    need[i] = neededHeight(hull, { az: e.az, el: e.el, r: e.r }, dte);
+  }
+  return { t, need, capM: ANT_CAP_M, minM: ANT_MIN_M };
 }
 
 async function metrics(key: string, t0: number, t1: number, stepMin: number, dte: number, now: number, plotPoints: number): Promise<MetricsResult> {
@@ -78,7 +110,8 @@ async function metrics(key: string, t0: number, t1: number, stepMin: number, dte
   const sunNext = nextTransition(ctx, now, 'sun', dte);
   const earthNext = nextTransition(ctx, now, 'earth', dte);
   const noons = localNoons(eph, ctx.frame.lon, t0 - 31 * DAY, t1 + 31 * DAY);
-  return { key, t0, t1, stepMs, metrics: m, plot, now: evalAt(ctx, now), sunNext, earthNext, noons };
+  const antenna = antennaSeries(ctx, t0, t1, dte);
+  return { key, t0, t1, stepMs, metrics: m, plot, now: evalAt(ctx, now), sunNext, earthNext, noons, antenna };
 }
 
 async function calendar(keys: string[], dayStart: number, days: number, stepMin: number, dte: number): Promise<CalendarResult> {
@@ -108,7 +141,7 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
         result = await init(r.dataBase);
         break;
       case 'profile':
-        result = await profile(r.key, r.x, r.y, r.hObs, r.naz ?? 1440);
+        result = await profile(r.key, r.x, r.y, r.hObs, r.naz ?? 1440, r.hAnt ?? r.hObs);
         break;
       case 'metrics':
         result = await metrics(r.key, r.t0, r.t1, r.stepMin, r.dte, r.now, r.plotPoints ?? 3000);

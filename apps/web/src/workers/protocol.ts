@@ -1,9 +1,10 @@
 import type { Transition, IntervalMetrics, Instant } from '../core/metrics';
 import type { HorizonProfile } from '../core/horizon';
+import type { AntennaSeries } from '../core/antenna';
 
 export type WorkerRequest =
   | { id: number; type: 'init'; dataBase: string }
-  | { id: number; type: 'profile'; key: string; x: number; y: number; hObs: number; naz?: number }
+  | { id: number; type: 'profile'; key: string; x: number; y: number; hObs: number; hAnt?: number; naz?: number }
   | { id: number; type: 'metrics'; key: string; t0: number; t1: number; stepMin: number; dte: number; now: number; plotPoints?: number }
   | { id: number; type: 'calendar'; keys: string[]; dayStart: number; days: number; stepMin?: number; dte: number }
   | { id: number; type: 'terrain'; x: number; y: number };
@@ -42,6 +43,8 @@ export interface MetricsResult {
   sunNext: Transition | null;
   earthNext: Transition | null;
   noons: number[];
+  /** Needed antenna height over the interval (Earth link), null if unavailable. */
+  antenna: AntennaSeries | null;
 }
 
 export interface CalendarResult {

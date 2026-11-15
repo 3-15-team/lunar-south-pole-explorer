@@ -1,5 +1,6 @@
 // Terrain horizon profile by multi-resolution ray marching (docs/METRICS.md).
-import { RAD, gridDirection, sampleTanElevation, wrap360, xyToLatLon, xyToUnit, type Vec3 } from './geo';
+import { HullBuilder, type HorizonHull } from './antenna';
+import { R_MOON_M, RAD, gridDirection, sampleTanElevation, wrap360, xyToLatLon, xyToUnit, type Vec3 } from './geo';
 
 /** Height source. Implemented by the DEM tile client (worker) and by analytic test terrains. */
 export interface DemSampler {
@@ -19,6 +20,7 @@ export interface HorizonOptions {
   maxDist?: number; // grid metres (default 300 km)
   hObs?: number; // observer height above terrain, m (default 2)
   farFrom?: number; // also compute the horizon formed only by terrain beyond this distance
+  hull?: boolean; // also keep per-azimuth envelopes for any observer/antenna height (core/antenna.ts)
 }
 
 export interface HorizonProfile {
@@ -35,6 +37,12 @@ export interface HorizonProfile {
   hTerrain: number;
   hObs: number;
   finestRes: number;
+  /** Envelopes for exact horizons at any height (worker-side only; never posted to the UI). */
+  hull?: HorizonHull;
+  /** Horizon seen from the Earth antenna (deg per azimuth); Earth visibility uses it when present. */
+  elevEarth?: Float32Array;
+  /** Antenna height above the site's terrain, m. */
+  hAnt?: number;
 }
 
 /** Distances and DEM resolutions of the ray-march steps. */
@@ -71,6 +79,7 @@ export function computeHorizon(sampler: DemSampler, x: number, y: number, o: Hor
   const sigma = sampler.errorAt ? new Float32Array(naz) : undefined;
   const ut: Vec3 = [0, 0, 0];
   const rho2 = sampler.maxRho * sampler.maxRho;
+  const hb = o.hull ? new HullBuilder(naz, d.length) : null;
   for (let k = 0; k < naz; k++) {
     const { dx, dy } = gridDirection(lon, (k * 360) / naz);
     let best = -Infinity;
@@ -86,6 +95,15 @@ export function computeHorizon(sampler: DemSampler, x: number, y: number, o: Hor
       if (h !== h) continue; // NaN: no data
       xyToUnit(px, py, ut);
       const t = sampleTanElevation(uo, ho, ut, h);
+      if (hb) {
+        // same geometry as sampleTanElevation, split into the height-independent Z and D
+        const ex = ut[0] - uo[0];
+        const ey = ut[1] - uo[1];
+        const ez = ut[2] - uo[2];
+        const c2 = ex * ex + ey * ey + ez * ez;
+        const rh = R_MOON_M + h;
+        hb.push(h - hT - (rh * c2) / 2, rh * Math.sqrt(c2) * Math.sqrt(1 - c2 / 4));
+      }
       if (t > best) {
         best = t;
         bestD = d[j];
@@ -94,6 +112,7 @@ export function computeHorizon(sampler: DemSampler, x: number, y: number, o: Hor
       }
       if (elevFar && d[j] >= (farFrom as number) && t > bestFar) bestFar = t;
     }
+    hb?.endRay();
     elev[k] = best === -Infinity ? -90 : Math.atan(best) * RAD;
     dist[k] = bestD;
     if (elevFar) elevFar[k] = bestFar === -Infinity ? -90 : Math.atan(bestFar) * RAD;
@@ -102,7 +121,7 @@ export function computeHorizon(sampler: DemSampler, x: number, y: number, o: Hor
       sigma[k] = Number.isFinite(sz) ? Math.atan(sz / bestD) * RAD : 0;
     }
   }
-  return { naz, elev, dist, sigma, elevFar, farFrom, x, y, lat, lon, hTerrain: hT, hObs, finestRes: fr };
+  return { naz, elev, dist, sigma, elevFar, farFrom, x, y, lat, lon, hTerrain: hT, hObs, finestRes: fr, hull: hb?.finish() };
 }
 
 /** Linear interpolation of a profile array at azimuth (deg). */

@@ -1,5 +1,6 @@
 // Left column: site catalogue + custom coordinates, pinned scenario cards with
 // "what if it slips" deltas.
+import type { Signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { formatLatLon, parseLatLon } from '../core/geo';
 import { KIND_LABEL, resolveSite, type Site, type SiteKind } from '../data/sites';
@@ -9,6 +10,7 @@ import {
   audience,
   catalog,
   catalogFallback,
+  hAnt,
   hObs,
   interval,
   pinScenario,
@@ -25,34 +27,31 @@ import { delta, fmtDate, fmtHours, fmtPct } from './format';
 import { fmtHeight, H_TICKS, heightToPos, POS_MAX, POS_MIN, POS_STEP, posToHeight, tickPos } from './heightScale';
 
 /**
- * Observer (camera / solar array / mast top) height above the local surface, 1–100 m, log scale.
- * The readout follows the drag; the horizon is recomputed once on release.
+ * Height above the local surface, 1–100 m, log scale (ui/heightScale.ts). The readout follows the
+ * drag; the horizon is recomputed once on release.
  */
-function HeightSlider() {
+function HeightSlider(props: { value: Signal<number>; label: string; title: string; id: string }) {
   const [drag, setDrag] = useState<number | null>(null);
-  const h = drag ?? hObs.value;
+  const h = drag ?? props.value.value;
   const pos = (e: Event) => posToHeight(+(e.target as HTMLInputElement).value);
   return (
-    <label
-      class="slider-row"
-      title="Height of the camera / solar array above the local surface at the site (not above a datum). Logarithmic: fine steps up to 10 m, coarser up to 100 m. Masts gain hours of sunlight at the pole."
-    >
-      <span>Height above surface</span>
+    <label class="slider-row" title={props.title}>
+      <span>{props.label}</span>
       <input
         type="range"
         min={POS_MIN}
         max={POS_MAX}
         step={POS_STEP}
-        list="height-ticks"
+        list={`${props.id}-ticks`}
         value={heightToPos(h)}
         aria-valuetext={fmtHeight(h)}
         onInput={(e) => setDrag(pos(e))}
         onChange={(e) => {
-          hObs.value = pos(e);
+          props.value.value = pos(e);
           setDrag(null);
         }}
       />
-      <datalist id="height-ticks">
+      <datalist id={`${props.id}-ticks`}>
         {H_TICKS.map((t) => (
           <option key={t} value={tickPos(t)} label={`${t}`} />
         ))}
@@ -125,7 +124,18 @@ export function SitePanel() {
         {coordErr && <div class="field-error">{coordErr}</div>}
         <div class="hint">…or click anywhere on the map.</div>
       </form>
-      <HeightSlider />
+      <HeightSlider
+        value={hObs}
+        id="height"
+        label="Height above surface"
+        title="Height of the camera / solar array above the local surface at the site (not above a datum). Drives the Sun metrics, the panorama eye and the map layers. Logarithmic: fine steps up to 10 m, coarser up to 100 m."
+      />
+      <HeightSlider
+        value={hAnt}
+        id="antenna"
+        label="Antenna height"
+        title="Height of the Earth-link antenna above the local surface. Drives Earth visibility (DTE), Earthrise/Earthset and comms gaps at the site. The map layers keep the observer height."
+      />
     </section>
   );
 }

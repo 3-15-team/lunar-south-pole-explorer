@@ -73,6 +73,30 @@ Visible area fraction of the body's disk above the horizon profile.
 All percentages shown in the UI are these fractions ×100. Metrics are computed on demand
 in a Web Worker (`apps/web/src/workers/site.worker.ts`).
 
+## Antenna height for the Earth link (ADR-121)
+
+Earth visibility (DTE share, comms gaps, Earthrise/Earthset, "Earth now") is evaluated from a
+separate **antenna height** `h_a` above the site's terrain (UI 1–100 m, default 2 m = the observer
+height); Sun metrics, the panorama and the map layers keep the observer height `h_o`.
+
+Exact for any height without re-marching the DEM: for every ray sample the elevation seen from
+height `h` is `tan e = (Z − h)/D` with `Z = h_k − h_t − (R + h_k)c²/2`, `D = (R + h_k)c√(1 − c²/4)`
+(same geometry as H(A)), both independent of `h`. Hence
+
+* horizon from `h`: `H_h(A) = atan max_k (Z_k − h)/D_k`;
+* height needed to see elevation `e` along A: `max_k (Z_k − D_k tan e)` — the upper envelope of
+  lines in `tan e`.
+
+The march keeps only each azimuth's envelope lines over |e| ≤ 35° (typically tens of lines;
+`apps/web/src/core/antenna.ts`). **Needed antenna height** at time t = lowest `h ∈ [1 m, 1 km]`
+with `f_earth(h) ≥ DTE threshold` (sliced disk on `H_h`, log bisection to 0.1 %; visibility is
+monotone in `h`). Reported over the interval at ≤ 1200 evenly spaced times: the series, its
+distribution (share of the interval with a link vs height) and quantiles (50 / 90 / 100 %).
+Above **1 km** the answer is "no link" — not an engineering option; it also covers the Earth being
+below the astronomical horizon (libration), where no mast helps.
+Check: share with a link at 2 m from the series = the DTE metric at 2 m (all 22 catalogue sites,
+±1 % sampling).
+
 ## Libration
 
 The Earth's topocentric (az, el) track over a month is a small loop (±~7° in longitude,

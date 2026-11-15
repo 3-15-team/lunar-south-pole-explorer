@@ -5,6 +5,7 @@ import { HeatCalendar } from './HeatCalendar';
 import { EduPanel, MetricRail, MetricTiles, Verdict } from './Metrics';
 import { ScenarioPanel, SitePanel } from './Panels';
 import { SkyPlot } from './SkyPlot';
+import { AntennaPanel } from './AntennaPanel';
 import { Timeline } from './Timeline';
 
 type Loader = () => Promise<{ default: ComponentType }>;
@@ -197,6 +198,7 @@ export function App() {
             <Verdict />
             <SkyPlot />
             <MetricTiles />
+            <AntennaPanel />
             <EduPanel />
           </>
         )}

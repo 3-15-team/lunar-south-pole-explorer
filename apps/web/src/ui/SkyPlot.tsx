@@ -84,7 +84,7 @@ export function SkyPlot() {
   }, [sr, inside, bucket, ephTick]);
 
   // y-range from content: nothing drawn may be clipped (horizon, tracks, current discs)
-  const trackEls = [m?.plot.sunEl, m?.plot.earthEl, local?.sunEl, local?.earthEl].filter((a): a is Float32Array => !!a);
+  const trackEls = [m?.plot.sunEl, m?.plot.earthEl, local?.sunEl, local?.earthEl, sr?.profile.elevEarth].filter((a): a is Float32Array => !!a);
   const [lo, hi] = skyElRange(sr ? sr.profile.elev : null, trackEls, now ? [[now.sunEl, now.sunR], [now.earthEl, now.earthR]] : []);
 
   useEffect(() => {
@@ -169,6 +169,21 @@ export function SkyPlot() {
       g.closePath();
       g.fill();
       g.stroke();
+      // horizon seen from the Earth antenna (when its height differs from the observer's)
+      if (p.elevEarth) {
+        g.strokeStyle = 'rgba(111,183,255,0.9)';
+        g.setLineDash([3, 3]);
+        g.beginPath();
+        for (let i = 0; i <= pw; i++) {
+          const v = profileAt(p.elevEarth, (i / pw) * 360);
+          if (i === 0) g.moveTo(L + i, Y(v));
+          else g.lineTo(L + i, Y(v));
+        }
+        g.stroke();
+        g.setLineDash([]);
+        g.fillStyle = 'rgba(111,183,255,0.9)';
+        g.fillText(`antenna ${p.hAnt ?? ''} m`, L + 4, T + ph - 4);
+      }
     }
     // tracks
     const track = (az: Float32Array, el: Float32Array, f: Float32Array | null, color: string, dimColor: string) => {
@@ -304,7 +319,7 @@ function CloseUp({ body }: { body: 'sun' | 'earth' }) {
     g.moveTo(0, H);
     for (let x = 0; x <= W; x++) {
       const dAz = (x - W / 2) / s / Math.max(cosEl, 0.05);
-      g.lineTo(x, Y(profileAt(sr.profile.elev, az + dAz)));
+      g.lineTo(x, Y(profileAt(body === 'earth' && sr.profile.elevEarth ? sr.profile.elevEarth : sr.profile.elev, az + dAz)));
     }
     g.lineTo(W, H);
     g.closePath();

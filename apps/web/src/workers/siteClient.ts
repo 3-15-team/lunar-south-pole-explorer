@@ -37,15 +37,16 @@ export class SiteClient {
     });
   }
 
-  static siteKey(x: number, y: number, hObs: number): string {
-    return `${Math.round(x)}:${Math.round(y)}:${hObs.toFixed(1)}`;
+  static siteKey(x: number, y: number, hObs: number, hAnt = hObs): string {
+    return `${Math.round(x)}:${Math.round(y)}:${hObs.toFixed(1)}:${hAnt.toFixed(1)}`;
   }
 
-  profile(x: number, y: number, hObs: number): Promise<ProfileResult> {
-    const key = SiteClient.siteKey(x, y, hObs);
+  /** Horizon for the observer (Sun, panorama) and the Earth antenna; heights above the terrain, m. */
+  profile(x: number, y: number, hObs: number, hAnt = hObs): Promise<ProfileResult> {
+    const key = SiteClient.siteKey(x, y, hObs, hAnt);
     let p = this.profiles.get(key);
     if (!p) {
-      p = this.ready.then(() => this.call({ type: 'profile', key, x, y, hObs }) as Promise<ProfileResult>);
+      p = this.ready.then(() => this.call({ type: 'profile', key, x, y, hObs, hAnt }) as Promise<ProfileResult>);
       p.catch(() => this.profiles.delete(key));
       this.profiles.set(key, p);
     }

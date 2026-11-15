@@ -1,7 +1,7 @@
 // Panorama mode (lazy). Uses the shared store: site, time, observer height, lighting.
 import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { dte, hObs, instant, lighting, metricsState, microRelief, mode, services, siteResult, time } from '../state/store';
+import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, services, siteResult, time } from '../state/store';
 import { config } from '../config';
 import { countdownMs } from '../state/countdown';
 import { fmtCountdown, fmtDate, fmtDeg, fmtPct } from '../ui/format';
@@ -151,7 +151,7 @@ export default function PanoView() {
         <div class="hud-box">
           <div class="hud-big">{m?.earthNext ? `${earthUp ? 'Earthset' : 'Earthrise'} in ${fmtCountdown(countdownMs(m, m.earthNext, t))}` : earthUp ? 'Earth up for 60+ d' : 'No Earth for 60+ d'}</div>
           <div>
-            🜨 el {fmtDeg(now?.earthEl)} · {fmtPct(now?.fEarth)} visible
+            🜨 el {fmtDeg(now?.earthEl)} · {fmtPct(now?.fEarth)} visible{hAnt.value !== hObs.value ? ` from the ${hAnt.value} m antenna` : ''}
           </div>
         </div>
         <div class="hud-box muted">{fmtDate(t)}</div>

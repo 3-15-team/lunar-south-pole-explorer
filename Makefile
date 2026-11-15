@@ -175,7 +175,7 @@ dist: web-build ## Self-contained static site (SPA + data/web) in dist-static/
 serve-dist: ## Serve dist-static/ on :8081 (what any static host would serve)
 	cd dist-static && $(PYTHON_BOOT) -m http.server 8081
 
-deploy: ## Provider-agnostic deploy hook: make deploy DEPLOY_TARGET=static|gcp|azure
+deploy: ## Deploy: DEPLOY_TARGET=droplet DROPLET=root@<ip> [DOMAIN=…] (make up + Caddy HTTPS); also static, gcp, azure
 	@bash infra/deploy/deploy.sh $(DEPLOY_TARGET)
 
 # ---------------------------------------------------------------- housekeeping

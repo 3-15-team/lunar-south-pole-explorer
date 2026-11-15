@@ -22,6 +22,52 @@ import {
   type MetricsState,
 } from '../state/store';
 import { delta, fmtDate, fmtHours, fmtPct } from './format';
+import { fmtHeight, H_TICKS, heightToPos, POS_MAX, POS_MIN, POS_STEP, posToHeight, tickPos } from './heightScale';
+
+/**
+ * Observer (camera / solar array / mast top) height above the local surface, 1–100 m, log scale.
+ * The readout follows the drag; the horizon is recomputed once on release.
+ */
+function HeightSlider() {
+  const [drag, setDrag] = useState<number | null>(null);
+  const h = drag ?? hObs.value;
+  const pos = (e: Event) => posToHeight(+(e.target as HTMLInputElement).value);
+  return (
+    <label
+      class="slider-row"
+      title="Height of the camera / solar array above the local surface at the site (not above a datum). Logarithmic: fine steps up to 10 m, coarser up to 100 m. Masts gain hours of sunlight at the pole."
+    >
+      <span>Height above surface</span>
+      <input
+        type="range"
+        min={POS_MIN}
+        max={POS_MAX}
+        step={POS_STEP}
+        list="height-ticks"
+        value={heightToPos(h)}
+        aria-valuetext={fmtHeight(h)}
+        onInput={(e) => setDrag(pos(e))}
+        onChange={(e) => {
+          hObs.value = pos(e);
+          setDrag(null);
+        }}
+      />
+      <datalist id="height-ticks">
+        {H_TICKS.map((t) => (
+          <option key={t} value={tickPos(t)} label={`${t}`} />
+        ))}
+      </datalist>
+      <output>{fmtHeight(h)}</output>
+      <span class="scale-labels" aria-hidden="true">
+        {[1, 10, 100].map((t) => (
+          <span key={t} style={{ '--p': (heightToPos(t) - POS_MIN) / (POS_MAX - POS_MIN) }}>
+            {t === 100 ? '100 m' : t}
+          </span>
+        ))}
+      </span>
+    </label>
+  );
+}
 
 const ORDER: SiteKind[] = ['pgda-5m', 'artemis', 'clps', 'mission', 'reference'];
 
@@ -79,11 +125,7 @@ export function SitePanel() {
         {coordErr && <div class="field-error">{coordErr}</div>}
         <div class="hint">…or click anywhere on the map.</div>
       </form>
-      <label class="slider-row" title="Height of the camera/solar array above the ground. Masts gain hours of sunlight at the pole.">
-        <span>Observer / mast height</span>
-        <input type="range" min={0} max={10} step={0.5} value={hObs.value} onChange={(e) => (hObs.value = +(e.target as HTMLInputElement).value)} />
-        <output>{hObs.value} m</output>
-      </label>
+      <HeightSlider />
     </section>
   );
 }

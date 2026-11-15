@@ -1,5 +1,6 @@
 // URL hash <-> state codec: every scenario is shareable as a link (static hosting friendly).
 import type { SiteRef } from '../data/sites';
+import { snapHeight } from '../ui/heightScale';
 import type { Audience, Layer, Mode, Preset, Scenario } from './store';
 
 export interface UrlState {
@@ -83,7 +84,8 @@ export function decodeState(hash: string): UrlState {
     const n = parseFloat(v);
     return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : undefined;
   };
-  out.hObs = num('h', 0, 10);
+  const h = num('h', 1, 100); // height above the local surface, m (ui/heightScale.ts)
+  out.hObs = h === undefined ? undefined : snapHeight(h);
   out.dte = num('dte', 0.05, 1);
   const l = p.get('l') as Layer | null;
   if (l && LAYERS.includes(l)) out.layer = l;

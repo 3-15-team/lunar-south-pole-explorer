@@ -395,6 +395,18 @@ export class PanoScene {
     return [this.site.x + this.k * (e * this.eG[0] + n * this.nG[0]), this.site.y + this.k * (e * this.eG[1] + n * this.nG[1])];
   }
 
+  /** Local (e, n) of SPS grid coordinates — inverse of toGrid (eG, nG are orthonormal). */
+  fromGrid(x: number, y: number): THREE.Vector2 {
+    const dx = (x - this.site.x) / this.k;
+    const dy = (y - this.site.y) / this.k;
+    return new THREE.Vector2(dx * this.eG[0] + dy * this.eG[1], dx * this.nG[0] + dy * this.nG[1]);
+  }
+
+  /** Clamp the viewer into the walkable area (after placing it from another site's frame). */
+  clampToWalk(): void {
+    this.pos.clampScalar(-this.walkLimit, this.walkLimit);
+  }
+
   private async sampleField(half: number, n: number, onProgress?: (f: number) => void): Promise<Float32Array> {
     const sp = (2 * half) / n;
     const z = this.dem.levelFor(sp);
@@ -830,7 +842,13 @@ export class PanoScene {
   }
 
   cancelFlight(): void {
+    if (!this.flight) return;
     this.flight = null;
+    this.onFlightEnd?.();
+  }
+
+  get flying(): boolean {
+    return this.flight !== null;
   }
 
   /** Advance an active flight; returns true while the view is changing. */
@@ -842,13 +860,13 @@ export class PanoScene {
     this.pos.lerpVectors(f.from, f.to, k);
     if (u >= 1) {
       this.flight = null;
-      this.onArrive?.(f.to.clone());
+      this.onFlightEnd?.();
     }
     return true;
   }
 
-  /** Called once when a flyTo() completes (not when cancelled). */
-  onArrive?: (to: THREE.Vector2) => void;
+  /** Called once when a flyTo() ends, by arriving or by cancelFlight(). */
+  onFlightEnd?: () => void;
 
   /**
    * View heading as a unit vector in SPS grid coordinates. Local north turns quickly with

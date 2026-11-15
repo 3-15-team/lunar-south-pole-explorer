@@ -41,8 +41,12 @@ const B = '-89.44,223.10';
     const r = await page.evaluate(() => ({
       note: !!document.querySelector('.sky-note'),
       h: document.querySelector('.skyplot')?.getBoundingClientRect().height ?? 0,
+      site: decodeURIComponent((location.hash.match(/s=([^&]*)/) || [])[1] || ''),
+      tile: document.querySelector('.tiles .tile .tile-value')?.textContent ?? '',
+      pano: document.querySelector('.pano .loading')?.textContent ?? 'ready',
+      you: (document.querySelector('.pano-coords .readout')?.textContent ?? '').replace(/^.*· /, ''),
     }));
-    samples.push(`${Date.now() - t0} note=${r.note} skyplotH=${Math.round(r.h)}`);
+    samples.push(`${Date.now() - t0} note=${r.note} skyplotH=${Math.round(r.h)} site=${r.site} tile=${r.tile} pano=${r.pano} you=${r.you}`);
     await page.waitForTimeout(40);
   }
   console.log('switch at', switchAt, 'final hash', await page.evaluate(() => location.hash));

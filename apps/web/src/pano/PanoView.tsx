@@ -2,7 +2,7 @@
 import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { dte, hAnt, hObs, instant, lighting, metricsState, microRelief, mode, services, siteRef, siteResult, time } from '../state/store';
-import { customFromXY } from '../data/sites';
+import { customFromXY, refKey } from '../data/sites';
 import { config } from '../config';
 import { formatLatLon } from '../core/geo';
 import { countdownMs } from '../state/countdown';
@@ -20,11 +20,31 @@ export default function PanoView() {
   const [microMissing, setMicroMissing] = useState(false);
   const [here, setHere] = useState('');
   const [hover, setHover] = useState('');
-  // view direction to restore after a double-click move rebuilds the scene at the new site
-  const carryView = useRef<{ heading: [number, number]; pitch: number } | null>(null);
   const sr = siteResult.value;
+  const metricsKey = metricsState.value?.key;
+  // A double-click selects the target as the site right away, so its horizon and metrics are
+  // computed during the flight. The scene itself (sceneSr) is rebuilt around the new site only
+  // once the flight is over and the metrics are in: the rebuild is heavy main-thread work and
+  // would otherwise interrupt the animation and hold back the right panel. Site changes from
+  // elsewhere (list, map, URL) still rebuild at once.
+  const [sceneSr, setSceneSr] = useState(sr);
+  const [flying, setFlying] = useState(false);
+  const ownMoves = useRef(new Set<string>()); // refKeys of sites selected by our double-clicks
+  const adoptingOwn = useRef(false);
+  // viewer pose carried across an own-move rebuild, in grid coordinates (frame-independent)
+  const carry = useRef<{ heading: [number, number]; pitch: number; grid: [number, number] } | null>(null);
 
   useEffect(() => {
+    if (sr?.key === sceneSr?.key) return;
+    const own = !!sr && ownMoves.current.has(refKey(sr.site.ref));
+    if (own && (flying || metricsKey !== sr.key)) return; // wait: flight still running / metrics pending
+    adoptingOwn.current = own;
+    if (own && refKey(sr.site.ref) === refKey(siteRef.peek())) ownMoves.current.clear();
+    setSceneSr(sr);
+  }, [sr, sceneSr, flying, metricsKey]);
+
+  useEffect(() => {
+    const sr = sceneSr;
     const dem = services.dem;
     const eph = services.eph;
     if (!sr || !dem || !eph || !canvas.current || !wrap.current) {
@@ -32,6 +52,7 @@ export default function PanoView() {
       return;
     }
     let disposed = false;
+    let ready = false; // scene built and showing (its pose is meaningful)
     let raf = 0;
     const p = sr.profile;
     const scene = new PanoScene(canvas.current, dem, eph, { x: sr.site.x, y: sr.site.y, lat: p.lat, lon: p.lon, hTerrain: p.hTerrain }, p);
@@ -74,15 +95,15 @@ export default function PanoView() {
       if (!hit) return;
       if (scene.geoAt(hit.x, hit.y).lat > -80) return; // outside the polar DEM: no horizon there
       scene.flyTo(hit, performance.now());
+      setFlying(true);
       dirty = true;
+      // select the target now so horizon + metrics are computed while we fly
+      const [x, y] = scene.toGrid(hit.x, hit.y);
+      const ref = customFromXY(x, y);
+      ownMoves.current.add(refKey(ref));
+      siteRef.value = ref;
     };
-    // Arriving makes the spot the selected site, so the horizon, metrics and right panel follow.
-    // The scene is then rebuilt around it (sr.key changes); keep the view direction across that.
-    scene.onArrive = (to) => {
-      carryView.current = { heading: scene.gridHeading(), pitch: scene.pitch };
-      const [x, y] = scene.toGrid(to.x, to.y);
-      siteRef.value = customFromXY(x, y);
-    };
+    scene.onFlightEnd = () => setFlying(false);
     const KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'];
     const onKey = (e: KeyboardEvent) => {
       if (/INPUT|SELECT|TEXTAREA/.test((e.target as HTMLElement)?.tagName)) return;
@@ -152,18 +173,26 @@ export default function PanoView() {
       .then(() => {
         if (disposed) return;
         scene.update(time.peek(), 0.035);
-        const carry = carryView.current;
-        carryView.current = null;
-        if (carry) {
-          scene.setGridHeading(carry.heading);
-          scene.pitch = carry.pitch;
+        const c = carry.current;
+        carry.current = null;
+        if (c) {
+          // same spot and direction as before the rebuild (camera may have walked off the target)
+          scene.pos.copy(scene.fromGrid(c.grid[0], c.grid[1]));
+          scene.clampToWalk();
+          scene.setGridHeading(c.heading);
+          scene.pitch = c.pitch;
         } else scene.lookAtAzimuth(scene.state.sunEl > -3 ? scene.state.sunAz : scene.state.earthAz);
         setMsg('');
+        ready = true;
         raf = requestAnimationFrame(loop);
       })
       .catch((e: Error) => setMsg('Panorama failed: ' + e.message));
 
     return () => {
+      if (adoptingOwn.current && ready) {
+        carry.current = { heading: scene.gridHeading(), pitch: scene.pitch, grid: scene.toGrid(scene.pos.x, scene.pos.y) };
+      }
+      adoptingOwn.current = false;
       disposed = true;
       cancelAnimationFrame(raf);
       stops.forEach((d) => d());
@@ -173,7 +202,7 @@ export default function PanoView() {
       window.removeEventListener('blur', blur);
       scene.dispose();
     };
-  }, [sr?.key]);
+  }, [sceneSr?.key]);
 
   const now = instant.value;
   const m = metricsState.value;

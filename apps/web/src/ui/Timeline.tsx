@@ -207,7 +207,13 @@ export function Timeline() {
         </div>
         <span class="tl-span muted">{fmtDuration(span)}</span>
       </div>
-      <div class="tl-track" ref={trackRef} onPointerDown={drag('time')}>
+      <div
+        class="tl-track"
+        ref={trackRef}
+        onPointerDown={drag('time')}
+        // double-click anywhere (also on the interval band / handles, where a single press drags) moves the playhead there
+        onDblClick={(e) => (time.value = tAt(e.clientX))}
+      >
         <canvas ref={canvasRef} class="tl-canvas" aria-hidden="true" />
         <div class="tl-range" style={{ left: pct(t0), width: `calc(${pct(t1)} - ${pct(t0)})` }} onPointerDown={drag('range')} title="Drag to move the interval">
           <div class="tl-handle start" role="slider" tabIndex={0} aria-label="Interval start" aria-valuetext={fmtDate(t0)} onPointerDown={drag('start')} onKeyDown={keyHandle('start')} />

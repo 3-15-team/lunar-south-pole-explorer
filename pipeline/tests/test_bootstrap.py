@@ -15,6 +15,9 @@ def test_complete_rejects_missing_and_corrupt_tiles(tmp_path, monkeypatch):
     tile = web / "dem/0/0/0.bin"
     tile.write_bytes(b"real-format-payload")
     (web / "ephem/index.json").write_text("{}")
+    for directory in ("micro", "outer"):
+        (web / directory).mkdir()
+        (web / directory / "index.json").write_text("{}")
     listing = web / "dem/SHA256SUMS"
     listing.write_text(f"{hashlib.sha256(tile.read_bytes()).hexdigest()}  0/0/0.bin\n")
     product = {"path": "web/dem/SHA256SUMS", "sha256": hashlib.sha256(listing.read_bytes()).hexdigest(),

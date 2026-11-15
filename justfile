@@ -16,6 +16,16 @@ compose-up:
 compose-down:
     docker compose down
 
+# Requires images and data from a completed bootstrap; stop normal mode first.
+compose-offline:
+    docker compose -f compose.yaml -f infra/offline.compose.yaml up --wait --wait-timeout 300
+
+compose-offline-down:
+    docker compose -f compose.yaml -f infra/offline.compose.yaml down
+
+compose-offline-smoke:
+    docker compose -f compose.yaml -f infra/offline.compose.yaml --profile tools run --rm smoke
+
 compose-logs:
     docker compose logs --follow --tail=100
 

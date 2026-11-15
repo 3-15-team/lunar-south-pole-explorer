@@ -45,6 +45,23 @@ Offline restart requires the built images and volume to remain present; a fresh
 machine needs these transferred or an initial online setup. Do not use `down -v`
 unless you intend to delete all downloaded and generated data.
 
+To enforce offline container networking after bootstrap, stop the normal stack,
+then run `just compose-offline` or this direct equivalent:
+
+```text
+docker compose -f compose.yaml -f infra/offline.compose.yaml up --wait --wait-timeout 300
+```
+
+This optional override requires Compose 2.24+ for its port reset. The internal
+Docker network permits web/API communication but gives application/data-processing
+containers no external route. A small ingress-only proxy exposes localhost on
+Docker Desktop, using the already-built web image. It has a host-facing network,
+but only forwards requests to the local web service; it does not acquire data.
+Use `just compose-offline-smoke` to check this mode through its ingress proxy.
+When switching back, stop the offline stack with `just compose-offline-down`
+(or `docker compose -f compose.yaml -f infra/offline.compose.yaml down`). Missing/corrupt data fails
+initialization rather than contacting NASA successfully through this network.
+
 The port binds to localhost only. To use another port, add `COMPOSE_PORT=8643` to
 `.env`. Panorama runtime options are also supported there: `PANO_TERRAIN_INTERP`,
 `PANO_RELIEF_AA`, `PANO_MICRO`, and `PANO_MICRO_DEFAULT`.

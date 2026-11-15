@@ -15,3 +15,5 @@ FROM nginx:1.27-alpine
 COPY infra/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=production-build /app/apps/web/dist /usr/share/nginx/html
 COPY --chmod=755 infra/web-config.sh /docker-entrypoint.d/40-web-config.sh
+# Also support archives/checkouts that did not apply .gitattributes on Windows.
+RUN sed -i 's/\r$//' /docker-entrypoint.d/40-web-config.sh

@@ -55,7 +55,7 @@ def main(argv=None) -> None:
     base = os.environ.get("DATA_BASE_URL", "").strip()
     if not base:
         sys.exit("DATA_BASE_URL is not set. Point it at a static copy of the data/ directory, e.g.\n"
-                 "  just data pull DATA_BASE_URL=https://example.org/lunar-data\n"
+                 "  set DATA_BASE_URL in .env, then run: just data pull\n"
                  "or rebuild locally with: just data-min")
     man = json.loads(MANIFEST.read_text())
     prods = man.get("products", {})

@@ -1,9 +1,12 @@
 // Sky plot: terrain horizon silhouette (+1σ band), Sun & Earth tracks over the
 // interval, current discs, plus true-aspect close-ups of each disc against the ridge.
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { makeSiteFrame } from '../core/ephemeris';
 import { profileAt } from '../core/horizon';
-import { instant, metricsState, siteResult } from '../state/store';
+import { evalAt, HOUR } from '../core/metrics';
+import { instant, metricsState, services, siteResult, time } from '../state/store';
 import { fmtDeg, fmtDistance, fmtPct } from './format';
+import { skyElRange } from './skyRange';
 
 const SUN = '#FFD45E';
 const EARTH = '#6FB7FF';
@@ -23,22 +26,66 @@ function setupCanvas(c: HTMLCanvasElement): CanvasRenderingContext2D {
   return g;
 }
 
+/** Tracks drawn around the playhead when the interval tracks don't contain it (± this span). */
+const LOCAL_SPAN = 36 * HOUR;
+const LOCAL_STEP = 15 * 60e3;
+
+interface Tracks {
+  sunAz: Float32Array;
+  sunEl: Float32Array;
+  fSun: Float32Array;
+  earthAz: Float32Array;
+  earthEl: Float32Array;
+  fEarth: Float32Array;
+}
+
 export function SkyPlot() {
   const ref = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<{ az: number; el: number; px: number } | null>(null);
+  const [ephTick, setEphTick] = useState(0);
   const sr = siteResult.value;
-  const m = metricsState.value;
+  const m0 = metricsState.value;
   const now = instant.value;
+  const t = time.value;
 
-  // y-range from content
-  let hi = 6;
-  if (sr) for (let i = 0; i < sr.profile.naz; i += 4) hi = Math.max(hi, sr.profile.elev[i] + 1.5);
-  if (m) {
-    hi = Math.max(hi, m.metrics.earthElStats.max + 1.5);
-    if (m.metrics.sunElStats) hi = Math.max(hi, m.metrics.sunElStats.max + 1);
-  }
-  hi = Math.min(hi, 35);
-  const lo = -3;
+  // Interval tracks only if they belong to the current site/mast (metrics lag a site change)
+  const m = m0 && sr && m0.key === sr.key ? m0 : null;
+  const n = m ? m.plot.t.length : 0;
+  const inside = !!m && n > 0 && t >= m.plot.t[0] && t <= m.plot.t[n - 1];
+  // Playhead outside the interval (or interval tracks not ready): the discs would float off the
+  // drawn curves, so recompute the tracks locally around the playhead (main thread, ~290 evals,
+  // refreshed per hour of playhead motion).
+  const bucket = Math.round(t / HOUR);
+  const local = useMemo<Tracks | null>(() => {
+    const eph = services.eph;
+    if (!sr || inside || !eph) return null;
+    const a = eph.clamp(bucket * HOUR - LOCAL_SPAN);
+    const b = eph.clamp(bucket * HOUR + LOCAL_SPAN);
+    if (!eph.isLoaded(a) || !eph.isLoaded(b + eph.stepMs)) {
+      eph.ensureRange(a, b).then(() => setEphTick((k) => k + 1)).catch(() => {});
+      return null;
+    }
+    const ctx = { frame: makeSiteFrame(sr.profile.lat, sr.profile.lon, sr.profile.hTerrain, sr.profile.hObs), profile: sr.profile, eph };
+    const k = Math.max(2, Math.floor((b - a) / LOCAL_STEP) + 1);
+    const tr: Tracks = {
+      sunAz: new Float32Array(k), sunEl: new Float32Array(k), fSun: new Float32Array(k),
+      earthAz: new Float32Array(k), earthEl: new Float32Array(k), fEarth: new Float32Array(k),
+    };
+    for (let i = 0; i < k; i++) {
+      const x = evalAt(ctx, a + ((b - a) * i) / (k - 1));
+      tr.sunAz[i] = x.sunAz;
+      tr.sunEl[i] = x.sunEl;
+      tr.fSun[i] = x.fSun;
+      tr.earthAz[i] = x.earthAz;
+      tr.earthEl[i] = x.earthEl;
+      tr.fEarth[i] = x.fEarth;
+    }
+    return tr;
+  }, [sr, inside, bucket, ephTick]);
+
+  // y-range from content: nothing drawn may be clipped (horizon, tracks, current discs)
+  const trackEls = [m?.plot.sunEl, m?.plot.earthEl, local?.sunEl, local?.earthEl].filter((a): a is Float32Array => !!a);
+  const [lo, hi] = skyElRange(sr ? sr.profile.elev : null, trackEls, now ? [[now.sunEl, now.sunR], [now.earthEl, now.earthR]] : []);
 
   useEffect(() => {
     const c = ref.current;
@@ -139,6 +186,13 @@ export function SkyPlot() {
       track(m.plot.earthAz, m.plot.earthEl, m.plot.fEarth, 'rgba(111,183,255,0.75)', 'rgba(111,183,255,0.25)');
       track(m.plot.sunAz, m.plot.sunEl, m.plot.fSun, 'rgba(255,212,94,0.85)', 'rgba(255,212,94,0.25)');
     }
+    if (local) {
+      // playhead outside the interval: ±36 h around it, dashed (not part of the analysed interval)
+      g.setLineDash([4, 3]);
+      track(local.earthAz, local.earthEl, local.fEarth, 'rgba(111,183,255,0.75)', 'rgba(111,183,255,0.25)');
+      track(local.sunAz, local.sunEl, local.fSun, 'rgba(255,212,94,0.85)', 'rgba(255,212,94,0.25)');
+      g.setLineDash([]);
+    }
     // current discs
     const disc = (az: number, el: number, r: number, color: string, label: string) => {
       const ry = Math.max(4, (r / (hi - lo)) * ph);
@@ -149,7 +203,9 @@ export function SkyPlot() {
       g.fill();
       g.stroke();
       g.fillStyle = '#e8edf3';
-      g.fillText(label, X(az) + ry + 3, Y(el) - ry);
+      const tw = g.measureText(label).width;
+      const lx = X(az) + ry + 3 + tw > L + pw ? X(az) - ry - 3 - tw : X(az) + ry + 3; // keep inside the plot
+      g.fillText(label, lx, Math.max(T + 9, Y(el) - ry));
     };
     if (now) {
       disc(now.earthAz, now.earthEl, now.earthR, EARTH, 'Earth');
@@ -162,7 +218,7 @@ export function SkyPlot() {
       g.lineTo(hover.px + 0.5, T + ph);
       g.stroke();
     }
-  }, [sr, m, now, hi, hover]);
+  }, [sr, m, local, now, lo, hi, hover]);
 
   const onMove = (e: MouseEvent) => {
     const c = ref.current;
@@ -189,6 +245,9 @@ export function SkyPlot() {
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
       />
+      {local && (
+        <div class="sky-note muted">Playhead outside the interval: dashed tracks show ±36 h around it.</div>
+      )}
       <div class="sky-readout" aria-live="polite">
         {hover && p ? (
           <span>

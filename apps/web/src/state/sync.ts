@@ -4,6 +4,7 @@ import { makeSiteFrame } from '../core/ephemeris';
 import { evalAt } from '../core/metrics';
 import { resolveSite, refKey } from '../data/sites';
 import { SiteClient } from '../workers/siteClient';
+import { eventsValid } from './countdown';
 import { decodeState, encodeState } from './url';
 import {
   DAY,
@@ -140,18 +141,25 @@ export function initCompute(client: SiteClient): void {
       });
   });
 
-  // 2) interval metrics + events (worker), debounced
+  // 2) interval metrics + events (worker)
   let metricsToken = 0;
-  const runMetrics = debounce((key: string, t0: number, t1: number, now: number, d: number) => {
+  // `settled` runs before metricsState is assigned (the assignment synchronously re-runs effects)
+  const fetchMetrics = (key: string, t0: number, t1: number, now: number, d: number, settled?: () => void): void => {
     const token = ++metricsToken;
     client
       .metrics(key, t0, t1, now, d)
       .then((m) => {
+        settled?.();
         if (token !== metricsToken) return;
         metricsState.value = { ...m, key } as MetricsState;
       })
-      .catch((e: Error) => (status.value = 'Metrics failed: ' + e.message));
-  }, 120);
+      .catch((e: Error) => {
+        settled?.();
+        status.value = 'Metrics failed: ' + e.message;
+      });
+  };
+  // interval / DTE / site edits arrive in bursts (slider drags): debounce
+  const runMetrics = debounce((key: string, t0: number, t1: number, now: number, d: number) => fetchMetrics(key, t0, t1, now, d), 120);
   effect(() => {
     const sr = siteResult.value;
     const [t0, t1] = interval.value;
@@ -159,15 +167,21 @@ export function initCompute(client: SiteClient): void {
     if (!sr) return;
     runMetrics(sr.key, t0, t1, time.peek(), d);
   });
-  // events are relative to the playhead: refresh when the playhead leaves the valid window
+  // Events (next sunset/sunrise, Earthset/rise) are relative to the playhead: refresh as soon as the
+  // playhead leaves [m.now.t, next event). NOT debounced: during Play the playhead moves every frame,
+  // so a trailing debounce would be postponed forever and the countdown would run negative. Instead
+  // at most one request is in flight; the effect also tracks metricsState, so each result re-checks
+  // the window against the current playhead and catches up if Play has already moved past it.
+  let eventsBusy = false;
   effect(() => {
     const t = time.value;
-    const m = metricsState.peek();
+    const m = metricsState.value;
     const sr = siteResult.peek();
-    if (!sr || !m || m.key !== sr.key) return;
-    const ref = m.now.t;
-    const nextT = Math.min(m.sunNext?.t ?? Infinity, m.earthNext?.t ?? Infinity);
-    if (t < ref || t >= nextT) runMetrics(sr.key, interval.peek()[0], interval.peek()[1], t, dte.peek());
+    if (!sr || !m || m.key !== sr.key || eventsBusy) return;
+    if (eventsValid(m, t)) return;
+    eventsBusy = true;
+    const [t0, t1] = interval.peek();
+    fetchMetrics(sr.key, t0, t1, t, dte.peek(), () => (eventsBusy = false));
   });
 
   // 3) instant values at the playhead (main thread, cheap)

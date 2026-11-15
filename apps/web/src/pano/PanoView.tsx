@@ -3,7 +3,8 @@ import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { dte, hObs, instant, lighting, metricsState, microRelief, mode, services, siteResult, time } from '../state/store';
 import { config } from '../config';
-import { fmtDate, fmtDeg, fmtDuration, fmtPct } from '../ui/format';
+import { countdownMs } from '../state/countdown';
+import { fmtCountdown, fmtDate, fmtDeg, fmtPct } from '../ui/format';
 import { PanoScene } from './scene';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -142,13 +143,13 @@ export default function PanoView() {
       </div>
       <div class="pano-hud">
         <div class="hud-box">
-          <div class="hud-big">{m?.sunNext ? `${sunUp ? 'Sunset' : 'Sunrise'} in ${fmtDuration(m.sunNext.t - t)}` : sunUp ? 'Sun up for 60+ d' : 'No Sun for 60+ d'}</div>
+          <div class="hud-big">{m?.sunNext ? `${sunUp ? 'Sunset' : 'Sunrise'} in ${fmtCountdown(countdownMs(m, m.sunNext, t))}` : sunUp ? 'Sun up for 60+ d' : 'No Sun for 60+ d'}</div>
           <div>
             ☀ el {fmtDeg(now?.sunEl)} · {fmtPct(now?.fSun)} of disk
           </div>
         </div>
         <div class="hud-box">
-          <div class="hud-big">{m?.earthNext ? `${earthUp ? 'Earthset' : 'Earthrise'} in ${fmtDuration(m.earthNext.t - t)}` : earthUp ? 'Earth up for 60+ d' : 'No Earth for 60+ d'}</div>
+          <div class="hud-big">{m?.earthNext ? `${earthUp ? 'Earthset' : 'Earthrise'} in ${fmtCountdown(countdownMs(m, m.earthNext, t))}` : earthUp ? 'Earth up for 60+ d' : 'No Earth for 60+ d'}</div>
           <div>
             🜨 el {fmtDeg(now?.earthEl)} · {fmtPct(now?.fEarth)} visible
           </div>

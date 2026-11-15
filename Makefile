@@ -1,4 +1,5 @@
 # Lunar South Pole Site Explorer — NASA Space Apps 2026
+# Empty machine (git + make + Docker): make bootstrap [DATA=min]    → http://localhost:8642
 # Quick start (local):  make setup && make data-min && make dev   → http://localhost:5173
 # Primary demo:         make up                                     → http://localhost:8642
 # GNU make 3.81 compatible (macOS default).
@@ -12,6 +13,7 @@ NPM            ?= npm
 WEB            := $(ROOT)/apps/web
 DATA_DIR       ?= $(ROOT)/data
 DATA_TIER      ?= 1
+DATA           ?= full
 WEB_PORT       ?= 5173
 COMPUTE_PORT   ?= 8000
 COMPOSE_PORT   ?= 8642
@@ -26,7 +28,7 @@ COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-d
 export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA PANO_MICRO PANO_MICRO_DEFAULT MAP_EARTH_ANTENNA
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
+.PHONY: bootstrap bootstrap-native data-docker help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
         data-sites data-psr data-horizon data-heatmaps data-micro data-outer data-pull data-status validate dev web-dev \
         compute-dev web-build web-preview up up-ai down logs ps lint typecheck test test-py test-web \
         build smoke verify dist serve-dist deploy clean clean-data
@@ -35,6 +37,16 @@ help: ## Show this help
 	@echo "Lunar South Pole Site Explorer — make targets"
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -e 's/:.*## /|/' | \
 	  awk -F'|' '{printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+# ---------------------------------------------------------------- from an empty machine
+bootstrap: ## EVERYTHING from a fresh clone (needs only Docker): data download+build, start, smoke. DATA=full or min
+	@DATA=$(DATA) COMPOSE_PORT=$(COMPOSE_PORT) bash infra/scripts/bootstrap.sh docker
+
+bootstrap-native: ## Same without Docker (python3 >= 3.11, node >= 20): .venv, npm, data, web build. DATA=full or min
+	@DATA=$(DATA) bash infra/scripts/bootstrap.sh native
+
+data-docker: ## Download + build data/ inside Docker (no local Python needed). DATA=full or min
+	@DATA=$(DATA) bash infra/scripts/bootstrap.sh data
 
 # ---------------------------------------------------------------- setup
 setup: setup-py setup-web ## Install Python venv (.venv) and web dependencies

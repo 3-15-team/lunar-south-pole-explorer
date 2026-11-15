@@ -6,7 +6,7 @@ import type { Ephemeris } from '../core/ephemeris';
 import type { Instant, Transition, IntervalMetrics } from '../core/metrics';
 import type { HorizonProfile } from '../core/horizon';
 import type { DemClient } from '../data/dem';
-import { resolveSite, type ResolvedSite, type Site, type SiteRef } from '../data/sites';
+import { refKey, resolveSite, type ResolvedSite, type Site, type SiteRef } from '../data/sites';
 import type { PlotSeries } from '../workers/protocol';
 import type { SiteClient } from '../workers/siteClient';
 
@@ -17,8 +17,9 @@ export type Preset = 'lander' | 'base';
 
 export const HOUR = 3600e3;
 export const DAY = 24 * HOUR;
-export const MAX_SCENARIOS = 4;
-export const SCENARIO_COLORS = ['#E69F00', '#56B4E9', '#CC79A7', '#009E73']; // Okabe–Ito
+// Okabe–Ito (colour-blind safe), black dropped for the dark UI; cycles beyond 7 scenarios
+export const SCENARIO_COLORS = ['#E69F00', '#56B4E9', '#CC79A7', '#009E73', '#0072B2', '#D55E00', '#F0E442'];
+export const scenarioColor = (i: number): string => SCENARIO_COLORS[i % SCENARIO_COLORS.length];
 
 export interface Scenario {
   id: string;
@@ -118,14 +119,28 @@ export function setInterval_(t0: number, t1: number): void {
   interval.value = [a, Math.max(b, a + HOUR)];
 }
 
+/**
+ * Scenario card the left panel scrolls to: the one just pinned, or (flash) the existing copy when a
+ * duplicate is pinned. `n` changes on every request so the same card can be revealed again.
+ */
+export const revealScenario = signal<{ id: string; n: number; flash: boolean } | null>(null);
+const reveal = (id: string, flash: boolean) => (revealScenario.value = { id, n: (revealScenario.peek()?.n ?? 0) + 1, flash });
+
 export function pinScenario(): void {
   const s = site.value;
   if (!s) return;
   const list = scenarios.value;
-  if (list.length >= MAX_SCENARIOS) return;
   const [t0, t1] = interval.value;
+  // same site + same interval already pinned: don't add a copy, point at the existing card
+  const key = refKey(s.ref);
+  const dup = list.find((c) => refKey(c.site) === key && c.t0 === t0 && c.t1 === t1);
+  if (dup) {
+    reveal(dup.id, true);
+    return;
+  }
   const id = Math.random().toString(36).slice(2, 8);
   scenarios.value = [...list, { id, site: s.ref, t0, t1, label: s.name }];
+  reveal(id, false);
 }
 
 export function removeScenario(id: string): void {

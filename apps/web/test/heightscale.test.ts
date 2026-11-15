@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decodeState } from '../src/state/url';
-import { fmtHeight, H_TICKS, heightToPos, POS_MAX, POS_MIN, POS_STEP, posToHeight, snapHeight, tickPos } from '../src/ui/heightScale';
+import { fmtHeight, H_TICKS, heightToPos, keyStepHeight, POS_MAX, POS_MIN, POS_STEP, posToHeight, snapHeight, tickPos } from '../src/ui/heightScale';
 
 describe('height above surface: log scale 1–100 m', () => {
   it('maps the ends and the decade to the slider', () => {
@@ -37,5 +37,22 @@ describe('height above surface: log scale 1–100 m', () => {
     expect(decodeState('h=0').hObs).toBe(1);
     expect(decodeState('h=250').hObs).toBe(100);
     expect(decodeState('h=3.14159').hObs).toBe(3.1);
+  });
+  it('keyboard steps by the snap, not the (finer) native range step', () => {
+    // a native step from 2 m is 2.018 m, which snaps back to 2.0 m: the slider would not move
+    expect(posToHeight(heightToPos(2) + POS_STEP)).toBe(2);
+    expect(keyStepHeight(2, 'ArrowUp')).toBe(2.1);
+    expect(keyStepHeight(2, 'ArrowRight')).toBe(2.1);
+    expect(keyStepHeight(2.1, 'ArrowDown')).toBe(2);
+    expect(keyStepHeight(9.9, 'ArrowUp')).toBe(10);
+    expect(keyStepHeight(10, 'ArrowUp')).toBe(11);
+    expect(keyStepHeight(10, 'ArrowDown')).toBe(9.9);
+    expect(keyStepHeight(1, 'ArrowDown')).toBe(1);
+    expect(keyStepHeight(100, 'ArrowUp')).toBe(100);
+    expect(keyStepHeight(2, 'PageUp')).toBe(5);
+    expect(keyStepHeight(2.5, 'PageDown')).toBe(2);
+    expect(keyStepHeight(38, 'Home')).toBe(1);
+    expect(keyStepHeight(3, 'End')).toBe(100);
+    expect(keyStepHeight(3, 'a')).toBeNull();
   });
 });

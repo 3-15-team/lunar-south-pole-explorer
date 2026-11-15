@@ -7,6 +7,7 @@ import { config } from '../config';
 import { formatLatLon } from '../core/geo';
 import { countdownMs } from '../state/countdown';
 import { fmtCountdown, fmtDate, fmtDeg, fmtDistance, fmtPct } from '../ui/format';
+import { HeightControl } from './HeightControl';
 import { FAST_SPEED, PanoScene, WALK_SPEED } from './scene';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -38,7 +39,9 @@ export default function PanoView() {
     if (sr?.key === sceneSr?.key) return;
     const own = !!sr && ownMoves.current.has(refKey(sr.site.ref));
     if (own && (flying || metricsKey !== sr.key)) return; // wait: flight still running / metrics pending
-    adoptingOwn.current = own;
+    // same site, new key = height changed (e.g. the height control): rebuild now but keep the pose
+    const sameSite = !!sr && !!sceneSr && refKey(sr.site.ref) === refKey(sceneSr.site.ref);
+    adoptingOwn.current = own || sameSite;
     if (own && refKey(sr.site.ref) === refKey(siteRef.peek())) ownMoves.current.clear();
     setSceneSr(sr);
   }, [sr, sceneSr, flying, metricsKey]);
@@ -272,6 +275,7 @@ export default function PanoView() {
           <div class="readout">{hover ? `Cursor: ${hover}` : 'Move the cursor over the terrain'}</div>
         </div>
       )}
+      <HeightControl />
       {msg && <div class="loading">{msg}</div>}
       <div class="pano-help">Drag to look · Double-click to go there · WASD walk {WALK_SPEED} m/s · Shift {FAST_SPEED} m/s · LOLA 5–20 m terrain{micro ? ' + synthetic sub-DEM relief (statistical crater/boulder model, not imagery)' : ', procedural (synthetic) surface texture'}</div>
     </div>

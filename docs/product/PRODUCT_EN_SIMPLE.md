@@ -28,7 +28,7 @@ Picture the Moon's south pole like this:
   - the longest stretch of darkness,
   - how often the Earth is visible (for radio),
   - how long until sunset or sunrise, and until Earth disappears or reappears.
-- Lets you **compare up to four plans** and drag a slider to see **what changes if the launch slips**.
+- Lets you **compare several plans** and drag a slider to see **what changes if the launch slips**.
 - Can **suggest good spots** on the map (not too steep, lots of light, Earth in view).
 - Lets you **stand on the surface** in 3D and look around: the Sun skimming the hills, the Earth low in
   the black sky.

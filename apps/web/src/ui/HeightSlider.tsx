@@ -1,6 +1,6 @@
 import type { Signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
-import { fmtHeight, H_TICKS, heightToPos, POS_MAX, POS_MIN, POS_STEP, posToHeight, tickPos } from './heightScale';
+import { fmtHeight, H_TICKS, heightToPos, keyStepHeight, POS_MAX, POS_MIN, POS_STEP, posToHeight, tickPos } from './heightScale';
 
 /**
  * Height above the local surface, 1–100 m, log scale (ui/heightScale.ts). The readout follows the
@@ -21,6 +21,12 @@ export function HeightSlider(props: { value: Signal<number>; label: string; titl
         list={`${props.id}-ticks`}
         value={heightToPos(h)}
         aria-valuetext={fmtHeight(h)}
+        onKeyDown={(e) => {
+          const next = keyStepHeight(props.value.peek(), e.key);
+          if (next === null) return;
+          e.preventDefault();
+          if (next !== props.value.peek()) props.value.value = next;
+        }}
         onInput={(e) => setDrag(pos(e))}
         onChange={(e) => {
           props.value.value = pos(e);

@@ -6,7 +6,7 @@ Lunar South Pole Site Explorer is a web application for comparing landing and ba
 lunar south pole. You pick a site from the catalogue or enter any coordinates, choose a date or time
 interval, and the app shows how the Sun and the Earth move relative to the **real terrain horizon**:
 how much sunlight the site gets (power), when the Earth is visible (direct-to-Earth communications),
-the longest night, and the time left until sunset and Earthset. Up to four scenarios can be compared
+the longest night, and the time left until sunset and Earthset. Any number of scenarios can be compared
 side by side, including "what if the mission slips by N days".
 
 Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Browser*.
@@ -32,7 +32,7 @@ Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Brow
 | **Analysis layers** | Illumination % over an interval, Earth visibility %, longest night, slope, and a transparent suitability score for an L×L m footprint (5–100 m). |
 | **Sky plot** | The terrain horizon silhouette (with a ±1σ uncertainty band from LOLA error maps), the Sun and Earth tracks over the interval, and true-scale close-ups of each disc against the ridge. |
 | **Metric tiles** | Sunset/sunrise countdown, Earthset/Earthrise countdown, current visible fraction of each disc, interval illumination, longest darkness, DTE visibility and longest communications gap, vertical vs flat solar-panel output. |
-| **Scenario comparison** | Pin up to 4 site + interval scenarios; a "What if it slips?" slider (−30…+30 days) shows deltas and a plain-language verdict. |
+| **Scenario comparison** | Pin any number of site + interval scenarios; a "What if it slips?" slider (−30…+30 days) shows deltas and a plain-language verdict. |
 | **Date × site calendar** | Daily sunlight for 60 days for several sites; click a day to jump to it. |
 | **Best-spot search** | Finds the top locations in the current view, with **rank stability** under Monte-Carlo weight perturbation (robustness, not probability). |
 | **Region overview** | Region-wide suitability heatmap from the compute server; falls back to pre-computed maps if the server is offline. |
@@ -117,7 +117,7 @@ Surface micro-texture, the intro Moon, the star field and the Earth pattern are 
 ┌ Header: title · Map | Panorama · Explorer | Planner · Share · Intro ──────────────┐
 ├ Left: sites,         ├ Centre: map or panorama           ├ Right: verdict,      ┤
 │ coordinates,         │                                    │ sky plot, metric     │
-│ mast height,         │                                    │ tiles, "Why the pole │
+│                      │                                    │ tiles, "Why the pole │
 │ scenarios            │                                    │ is different"        │
 ├──────────────────────┴────────────────────────────────────┴──────────────────────┤
 │ Bottom: timeline (play, time, interval, Sun/Earth strips) · date × site calendar │
@@ -136,8 +136,7 @@ Surface micro-texture, the intro Moon, the star field and the Earth pattern are 
   *approx.* (approximate published coordinate), *outside coverage* (beyond 80°S — no terrain horizon).
 - **Custom coordinates**: type `89.45S 137.3W` or `-89.45, -137.3` and press **Go** — or simply click
   anywhere on the map.
-- **Observer / mast height** (0–10 m): raising a camera or solar array often adds hours of sunlight.
-- **+ Pin current site & interval** adds a scenario card (up to 4).
+- **+ Pin current site & interval** adds a scenario card (no limit; colours repeat after 7).
 - **What if it slips?** shifts every pinned scenario by −30…+30 days. Each card shows plan vs slipped
   values (sunlight, longest night, Earth contact; in Planner mode also comms gap and panel output),
   coloured deltas and a one-line verdict. Click a card title to load it; × removes it.
@@ -162,6 +161,8 @@ Surface micro-texture, the intro Moon, the star field and the Earth pattern are 
 
 ### Centre: panorama
 - Drag to look around; `W A S D` or arrow keys walk at 5 m/s, `Shift` moves at 25 m/s; double-click the ground or a mountain to move there in 1 s (up to ~10 km from the site).
+- **Height above surface** (bottom-right button → vertical slider, 1–100 m, log scale): camera / solar array /
+  mast height; raising it often adds hours of sunlight. Also drives the Sun metrics and the map layers.
 - The HUD shows the sunset/sunrise and Earthset/Earthrise countdowns, current elevations and visible
   fractions; the compass shows your heading.
 - **Enhanced / Realistic** as on the map; **← Map** returns to the map.

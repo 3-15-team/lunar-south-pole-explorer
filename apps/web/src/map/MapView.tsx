@@ -20,7 +20,7 @@ import { formatLatLon, xyToLatLon } from '../core/geo';
 import { PRESETS, rankStability, type Candidate } from '../core/suitability';
 import { customFromXY, resolveSite } from '../data/sites';
 import {
-  SCENARIO_COLORS,
+  scenarioColor,
   catalog,
   computeOnline,
   dte,
@@ -232,7 +232,7 @@ export default function MapView() {
           const f = new Feature(new Point([r.x, r.y]));
           f.setStyle(
             new Style({
-              image: new RegularShape({ points: 4, radius: 9, angle: Math.PI / 4, fill: new Fill({ color: SCENARIO_COLORS[i % 4] }), stroke: new Stroke({ color: '#000', width: 1.5 }) }),
+              image: new RegularShape({ points: 4, radius: 9, angle: Math.PI / 4, fill: new Fill({ color: scenarioColor(i) }), stroke: new Stroke({ color: '#000', width: 1.5 }) }),
             }),
           );
           selSrc.addFeature(f);

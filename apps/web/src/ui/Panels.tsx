@@ -1,18 +1,17 @@
 // Left column: site catalogue + custom coordinates, pinned scenario cards with
 // "what if it slips" deltas.
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatLatLon, parseLatLon } from '../core/geo';
 import { KIND_LABEL, resolveSite, type Site, type SiteKind } from '../data/sites';
 import {
-  MAX_SCENARIOS,
-  SCENARIO_COLORS,
   audience,
   catalog,
   catalogFallback,
-  hObs,
   interval,
   pinScenario,
   removeScenario,
+  revealScenario,
+  scenarioColor,
   scenarioResults,
   scenarios,
   siteRef,
@@ -22,7 +21,6 @@ import {
   type MetricsState,
 } from '../state/store';
 import { delta, fmtDate, fmtHours, fmtPct } from './format';
-import { HeightSlider } from './HeightSlider';
 
 const ORDER: SiteKind[] = ['pgda-5m', 'artemis', 'clps', 'mission', 'reference'];
 
@@ -108,12 +106,6 @@ export function SitePanel() {
         {coordErr && <div class="field-error">{coordErr}</div>}
         <div class="hint">…or click anywhere on the map.</div>
       </form>
-      <HeightSlider
-        value={hObs}
-        id="height"
-        label="Height above surface"
-        title="Height of the camera / solar array above the local surface at the site (not above a datum). Drives the Sun metrics, the panorama eye and the map layers. Logarithmic: fine steps up to 10 m, coarser up to 100 m."
-      />
     </section>
   );
 }
@@ -148,12 +140,32 @@ export function ScenarioPanel() {
   const res = scenarioResults.value;
   const slip = slipDays.value;
   const planner = audience.value === 'planner';
+  const shown = revealScenario.value;
+  const cardsRef = useRef<HTMLDivElement>(null);
+  // scroll the left panel to the card just pinned (or to the existing copy of a duplicate). Cards
+  // change height while their metrics load (pinning recomputes every scenario), which moves the
+  // target, so keep it in view while the list resizes — for a short while only, so a manual
+  // scroll afterwards isn't fought.
+  useEffect(() => {
+    const list = cardsRef.current;
+    if (!shown || !list) return;
+    const show = () => list.querySelector(`[data-id="${shown.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    show();
+    const ro = new ResizeObserver(show);
+    ro.observe(list);
+    for (const c of list.children) ro.observe(c);
+    const stop = setTimeout(() => ro.disconnect(), 3000);
+    return () => {
+      clearTimeout(stop);
+      ro.disconnect();
+    };
+  }, [shown?.n]);
   return (
     <section class="panel scenarios" aria-label="Scenario comparison">
       <div class="panel-title">
-        Compare scenarios <span class="muted">({list.length}/{MAX_SCENARIOS})</span>
+        Compare scenarios <span class="muted">({list.length})</span>
       </div>
-      <button class="btn primary wide" onClick={pinScenario} disabled={list.length >= MAX_SCENARIOS || !site.value}>
+      <button class="btn primary wide" onClick={pinScenario} disabled={!site.value}>
         + Pin current site & interval
       </button>
       <label class="slider-row slip" title="Shift every pinned scenario's interval and compare">
@@ -164,15 +176,22 @@ export function ScenarioPanel() {
           {slip} d
         </output>
       </label>
-      {list.length === 0 && <div class="hint">Pin up to four site/date scenarios to compare them side by side, then drag the slip slider.</div>}
-      <div class="cards">
+      {list.length === 0 && <div class="hint">Pin site/date scenarios to compare them side by side, then drag the slip slider.</div>}
+      <div class="cards" ref={cardsRef}>
         {list.map((sc, i) => {
           const r = res[sc.id] ?? {};
           const s = resolveSite(sc.site, catalog.value);
           const a = r.base?.metrics;
           const b = r.slipped?.metrics;
+          const flashing = !!shown?.flash && shown.id === sc.id;
           return (
-            <article class="card" style={{ '--c': SCENARIO_COLORS[i % 4] } as Record<string, string>}>
+            <article
+              // a new key on each repeat restarts the flash animation
+              key={flashing ? `${sc.id}:${shown.n}` : sc.id}
+              data-id={sc.id}
+              class={`card${flashing ? ' flash' : ''}`}
+              style={{ '--c': scenarioColor(i) } as Record<string, string>}
+            >
               <header>
                 <button
                   class="card-title"

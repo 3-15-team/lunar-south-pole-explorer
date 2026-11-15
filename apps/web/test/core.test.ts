@@ -199,6 +199,16 @@ describe('url state', () => {
     expect(d.slipDays).toBe(-7);
     expect(d.view).toEqual(s.view);
   });
+  it('keeps every pinned scenario (no 4-scenario cap)', () => {
+    const scenarios = Array.from({ length: 6 }, (_, k) => ({
+      id: `s${k}`,
+      site: { kind: 'catalog' as const, id: `site0${k + 1}` },
+      t0: Date.UTC(2027, 0, 1 + k),
+      t1: Date.UTC(2027, 0, 15 + k),
+    }));
+    const d = decodeState(encodeState({ scenarios }));
+    expect(d.scenarios?.map((c) => c.site)).toEqual(scenarios.map((c) => c.site));
+  });
 });
 
 describe('suitability', () => {

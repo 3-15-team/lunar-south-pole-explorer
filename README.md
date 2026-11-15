@@ -18,28 +18,17 @@ compare up to four scenarios side by side — including "what if the launch slip
 Everything in the challenge core runs **client-side** (static hosting works); the optional
 FastAPI `compute` service accelerates region-scale heatmaps and robustness Monte-Carlo.
 
-## From an empty machine — one command
+## From a fresh clone — one command
 
-Only **git, make and Docker** (Docker Desktop on macOS/Windows, Docker Engine + compose plugin on
-Linux) are needed; Python and Node run inside containers.
+Needs python3 ≥ 3.11, node ≥ 20 and Docker.
 
 ```bash
-git clone https://github.com/3-15-team/lunar-south-pole-explorer.git
-cd lunar-south-pole-explorer
-make bootstrap            # full data: ~2.5 GB download, 5 m site DEMs; needs ~10 GB disk, ~6 GB Docker RAM
-# or
-make bootstrap DATA=min   # smallest working set: ~0.4 GB download (80 m DEM), ~4 GB disk, much faster
+make bootstrap            # = make setup + make data + make up + make smoke   → http://localhost:8642
+make bootstrap DATA=min   # data-min instead of data (~0.4 GB download instead of ~2.5 GB)
 ```
 
-It checks prerequisites (disk, Docker daemon/RAM, port), builds the pipeline toolchain image,
-downloads every source file with live progress (plan first: files / total / already present, then
-`[i/N] file … % MB/s ETA | all …%`), builds each data product with its own progress
-(`(k/n) dem_tiles — …`), starts the stack, waits until it answers, runs the smoke test and prints
-a timing summary and **http://localhost:8642**. Safe to re-run or interrupt: downloads resume,
-finished files and products are skipped. Another port: `make bootstrap COMPOSE_PORT=8650`.
-
-Variants: `make bootstrap-native` (no Docker; python3 ≥ 3.11 + node ≥ 20 on the machine; ends with
-`make dev`) and `make data-docker` (only download + build `data/` in Docker).
+Re-running is cheap: dependencies reinstall only when requirement files change, downloads are
+skipped when already in `data/manifest.json`, data jobs skip finished products.
 
 ## Quick start
 

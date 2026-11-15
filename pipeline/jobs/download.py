@@ -192,9 +192,16 @@ def expand(src: dict) -> list[dict]:
     listings: dict[str, list[str]] = {}
     root_links: list[str] | None = None
     out = []
+    known = load_manifest()["files"]
     for suffix in ("_surf.tif", "_toterr.tif"):
         for site in src["sites"]:
             base = root + f"{site}/"
+            fid = f"site5m-{site}-{suffix[1:-4]}"
+            m = known.get(fid)
+            if m and (DATA / m["path"]).exists() and (DATA / m["path"]).stat().st_size == m["size"]:
+                out.append({**src, "kind": "file", "id": fid, "url": m["url"], "size": m["size"],
+                            "dest": str(Path(m["path"]).relative_to("raw")), "site": site})
+                continue
             if site not in listings:
                 try:
                     listings[site] = list_dir(base)
@@ -241,9 +248,15 @@ def main() -> None:
         return
     # plan: sizes from sources.json, else HEAD (cheap), so the run shows what it will fetch
     print(f"download: {len(files)} files (tier <= {a.tier}) -> {RAW}", flush=True)
+    known = load_manifest()["files"]
+
+    def in_manifest(f: dict) -> bool:
+        m = known.get(f["id"])
+        return bool(m) and (DATA / m["path"]).exists() and (DATA / m["path"]).stat().st_size == m["size"]
+
     sizes: list[int | None] = []
     for f in files:
-        sizes.append(f.get("size") or remote_size(f["url"]))
+        sizes.append(known[f["id"]]["size"] if in_manifest(f) else (f.get("size") or remote_size(f["url"])))
     present = [cached_ok(RAW / f["dest"], sz) for f, sz in zip(files, sizes)]
     total = sum(sz or 0 for sz in sizes)
     to_get = sum(sz or 0 for sz, ok in zip(sizes, present) if not ok)
@@ -253,6 +266,9 @@ def main() -> None:
     prog = Progress(to_get or None)
     t_all = time.time()
     for i, (f, sz) in enumerate(zip(files, sizes), 1):
+        if in_manifest(f):  # already downloaded and verified: no network, no re-hash
+            print(f"[{i}/{len(files)}] {f['id']}  {human(sz)}  ok (in manifest)", flush=True)
+            continue
         print(f"[{i}/{len(files)}] {f['id']}  {human(sz)}  {f['url']}", flush=True)
         dest = RAW / f["dest"]
         size, digest = fetch(f["url"], dest, sz, f.get("sha256"), prog=prog)

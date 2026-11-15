@@ -72,7 +72,7 @@ export function MetricTiles() {
         sub={mm ? `${mm.nSunsets} sunset${mm.nSunsets === 1 ? '' : 's'} in interval` : ''}
         hint="Longest continuous period with < 5% of the Sun visible — the battery/survival driver. '+' = runs past the interval edge."
       />
-      <Tile tone="earth" label="Earth visibility (DTE)" value={mm ? fmtPct(mm.earthFrac) : '…'} sub={mm ? `longest gap ${fmtHours(mm.longestNoCommsH)}` : ''} hint="Share of time with direct-to-Earth line of sight." />
+      <Tile tone="earth" label="Earth visibility (DTE)" value={mm ? fmtPct(mm.earthFrac) : '…'} sub={mm ? `longest gap ${fmtHours(mm.longestNoCommsH)}` : ''} hint="Share of time with direct-to-Earth line of sight from the antenna (Antenna height, left panel)." />
       <Tile
         label="Vertical vs flat panel"
         value={mm ? `×${mm.powerRatio >= 100 ? '100+' : mm.powerRatio.toFixed(0)}` : '…'}
@@ -84,7 +84,7 @@ export function MetricTiles() {
           <Tile label="Sun elevation (interval)" value={mm?.sunElStats ? `${fmtDeg(mm.sunElStats.min, 1)} … ${fmtDeg(mm.sunElStats.max, 1)}` : '—'} sub={mm?.sunElStats ? `mean ${fmtDeg(mm.sunElStats.mean)}` : 'never above the horizon'} />
           <Tile label="Earth elevation (interval)" value={mm ? `${fmtDeg(mm.earthElStats.min, 1)} … ${fmtDeg(mm.earthElStats.max, 1)}` : '—'} sub="libration wobble" />
           <Tile label="Shadow of a 2 m mast" value={shadow ? `${shadow >= 1000 ? (shadow / 1000).toFixed(1) + ' km' : Math.round(shadow) + ' m'}` : '∞'} sub="at the current Sun elevation" />
-          <Tile label="Site" value={`${fmtDeg(sr.profile.lat, 3)}, ${fmtDeg(sr.profile.lon, 3)}`} sub={`terrain ${Math.round(sr.profile.hTerrain)} m · observer ${fmtHeight(sr.profile.hObs)} above surface · DEM ${sr.profile.finestRes} m/px`} />
+          <Tile label="Site" value={`${fmtDeg(sr.profile.lat, 3)}, ${fmtDeg(sr.profile.lon, 3)}`} sub={`terrain ${Math.round(sr.profile.hTerrain)} m · observer ${fmtHeight(sr.profile.hObs)} · antenna ${fmtHeight(sr.profile.hAnt ?? sr.profile.hObs)} above surface · DEM ${sr.profile.finestRes} m/px`} />
         </>
       )}
       {planner && mm && mm.dteWindows.length > 0 && (

@@ -8,6 +8,7 @@ export interface UrlState {
   time?: number;
   interval?: [number, number];
   hObs?: number;
+  hAnt?: number;
   dte?: number;
   layer?: Layer;
   footprint?: number;
@@ -53,6 +54,7 @@ export function encodeState(s: UrlState): string {
   if (s.time !== undefined) p.set('t', isoMin(s.time));
   if (s.interval) p.set('i', `${isoMin(s.interval[0])}~${isoMin(s.interval[1])}`);
   if (s.hObs !== undefined && s.hObs !== 2) p.set('h', String(s.hObs));
+  if (s.hAnt !== undefined && s.hAnt !== 2) p.set('ha', String(s.hAnt));
   if (s.dte !== undefined && s.dte !== 0.5) p.set('dte', String(s.dte));
   if (s.layer && s.layer !== 'relief') p.set('l', s.layer);
   if (s.footprint !== undefined && s.footprint !== 50) p.set('fp', String(s.footprint));
@@ -86,6 +88,8 @@ export function decodeState(hash: string): UrlState {
   };
   const h = num('h', 1, 100); // height above the local surface, m (ui/heightScale.ts)
   out.hObs = h === undefined ? undefined : snapHeight(h);
+  const ha = num('ha', 1, 100); // Earth antenna height above the surface, m
+  out.hAnt = ha === undefined ? undefined : snapHeight(ha);
   out.dte = num('dte', 0.05, 1);
   const l = p.get('l') as Layer | null;
   if (l && LAYERS.includes(l)) out.layer = l;

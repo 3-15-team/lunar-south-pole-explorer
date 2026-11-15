@@ -21,8 +21,9 @@ PANO_TERRAIN_INTERP ?= catmull
 PANO_RELIEF_AA ?= 1
 PANO_MICRO ?= 1
 PANO_MICRO_DEFAULT ?=
+MAP_EARTH_ANTENNA ?=
 COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-directory $(ROOT)
-export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA PANO_MICRO PANO_MICRO_DEFAULT
+export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA PANO_MICRO PANO_MICRO_DEFAULT MAP_EARTH_ANTENNA
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \

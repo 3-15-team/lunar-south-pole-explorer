@@ -144,6 +144,16 @@ table.cmp thead th { text-align: right; font-size: 10px; }
 .verdict { font-size: 12px; margin-top: 6px; color: #dfe6ee; }
 
 /* right column */
+.antenna { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; font-size: 12px; }
+.ant-now { margin: 4px 0 6px; color: #c9d1db; }
+.ant-canvas { width: 100%; height: 104px; display: block; border-radius: 4px; margin-top: 4px; }
+.ant-q { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.ant-q td { padding: 2px 0; color: #c9d1db; }
+.ant-q td:last-child { text-align: right; font-family: var(--mono); }
+.c-warn { color: var(--warn); }
+.ant-ctl { max-width: 280px; background: rgba(11,14,19,0.85); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+.ant-ctl .btn { margin-top: 4px; }
+.c-ant { color: #ffd45e; }
 .skyplot { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
 .sky-canvas { width: 100%; height: 190px; display: block; border-radius: 4px; }
 .sky-note { font-size: 11px; margin-top: 2px; }

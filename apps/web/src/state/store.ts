@@ -1,5 +1,6 @@
 // Shared application state (signals). Every mode (warm-up, map, panorama) reads and
 // writes this store; the URL hash mirrors the shareable part (state/url.ts).
+import type { AntennaSeries } from '../core/antenna';
 import { computed, signal } from '@preact/signals';
 import type { Ephemeris } from '../core/ephemeris';
 import type { Instant, Transition, IntervalMetrics } from '../core/metrics';
@@ -43,6 +44,8 @@ export interface MetricsState {
   earthNext: Transition | null;
   noons: number[];
   now: Instant;
+  /** Needed Earth-antenna height over the interval (core/antenna.ts). */
+  antenna: AntennaSeries | null;
 }
 
 export interface ScenarioResult {
@@ -70,6 +73,10 @@ export const siteRef = signal<SiteRef>({ kind: 'catalog', id: 'site01' });
 export const time = signal<number>(hourFloor(Date.now()));
 export const interval = signal<[number, number]>([hourFloor(Date.now()), hourFloor(Date.now()) + 30 * DAY]);
 export const hObs = signal(2);
+/** Earth-link antenna height above the site's terrain, m (Earth visibility / DTE metrics; core/antenna.ts). */
+export const hAnt = signal(2);
+/** Map: user asked for the Earth layer from the antenna ("button" mode of config.mapEarthAntenna). */
+export const mapEarthAntRequested = signal(false);
 export const dte = signal(0.5);
 export const layer = signal<Layer>('relief');
 export const footprint = signal(50);

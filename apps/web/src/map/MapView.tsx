@@ -25,7 +25,9 @@ import {
   computeOnline,
   dte,
   footprint,
+  hAnt,
   hObs,
+  mapEarthAntRequested,
   interval,
   layer,
   lighting,
@@ -41,8 +43,10 @@ import {
   time,
   type Layer as LayerId,
 } from '../state/store';
+import { config } from '../config';
 import { cividis, fmtHours, fmtPct } from '../ui/format';
-import { TerrainEngine, type FrameLike } from './engine/engine';
+import { fmtHeight } from '../ui/heightScale';
+import { TerrainEngine, type AntennaPassState, type FrameLike } from './engine/engine';
 import { footprintSquare, latitudeRing, meridian, spsProjection } from './projection';
 
 const LAYERS: { id: LayerId; label: string; hint: string }[] = [
@@ -70,6 +74,7 @@ export default function MapView() {
   const el = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
   const [engStatus, setEngStatus] = useState('');
+  const [antPass, setAntPass] = useState<AntennaPassState>({ state: 'off' });
   const [hover, setHover] = useState('');
   const [pegArmed, setPegArmed] = useState(false);
   const [cands, setCands] = useState<(Candidate & { lat: number; lon: number })[] | null>(null);
@@ -101,6 +106,7 @@ export default function MapView() {
     const terrain = new Layer({ render: (fs) => engine.render(fs as unknown as FrameLike) });
     engine.onNeedRender = () => terrain.changed();
     engine.onStatus = setEngStatus;
+    engine.onAntenna = setAntPass;
 
     // graticule
     const grat = new VectorSource();
@@ -184,6 +190,8 @@ export default function MapView() {
           interval: interval.value,
           layer: layer.value,
           obsH: hObs.value,
+          // Earth share from the antenna height: only on demand (config.mapEarthAntenna, ADR-122)
+          antH: hAnt.value !== hObs.value && (config.mapEarthAntenna === 'layer' || mapEarthAntRequested.value) ? hAnt.value : null,
           dte: dte.value,
           footprint: footprint.value,
           weights: pr.weights,
@@ -277,7 +285,7 @@ export default function MapView() {
       }
       const vals = layer.peek() === 'relief' || layer.peek() === 'shadow' || layer.peek() === 'slope' ? null : engine.valuesAt(x, y);
       if (vals) {
-        txt += ` · sun ${fmtPct(vals.illum)} · Earth ${fmtPct(vals.earth)} · longest night ${fmtHours(vals.dark)}`;
+        txt += ` · sun ${fmtPct(vals.illum)} · Earth ${fmtPct(vals.earth)}${vals.earthAntH ? ` (${vals.earthAntH} m antenna)` : ''} · longest night ${fmtHours(vals.dark)}`;
         if (vals.slopeMax !== undefined) txt += ` · max slope ${vals.slopeMax.toFixed(1)}° · relief ${vals.relief!.toFixed(1)} m`;
       }
       setHover(txt);
@@ -388,6 +396,7 @@ export default function MapView() {
           ))}
         </div>
         <Legend layer={L} darkRef={pr.darkRef} />
+        {(L === 'earth' || L === 'suit') && <AntennaLayerCtl pass={antPass} />}
         {L === 'suit' && (
           <div class="suit-ctl">
             <label>
@@ -463,6 +472,48 @@ export default function MapView() {
         <div class="readout">{hover || 'Move the cursor over the terrain'}</div>
         {engStatus && <div class="readout muted">{engStatus}</div>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Which height the Earth share on the map comes from, and (in "button" mode) the request to
+ * recompute it for the antenna. Shown for the Earth-visibility and Suitability layers only.
+ */
+function AntennaLayerCtl({ pass }: { pass: AntennaPassState }) {
+  const ha = hAnt.value;
+  const ho = hObs.value;
+  if (ha === ho) return <div class="hint ant-ctl">Earth from {fmtHeight(ho)} (observer = antenna height)</div>;
+  const button = config.mapEarthAntenna === 'button';
+  const requested = !button || mapEarthAntRequested.value;
+  return (
+    <div class="hint ant-ctl">
+      {!requested ? (
+        <>
+          <span>Earth shown from the {fmtHeight(ho)} observer height.</span>{' '}
+          <button class="btn small" onClick={() => (mapEarthAntRequested.value = true)} title="Second horizon pass on the GPU for this view (a few seconds)">
+            Use the {fmtHeight(ha)} antenna
+          </button>
+        </>
+      ) : pass.state === 'ready' ? (
+        <>
+          <span class="c-earth">Earth from the {fmtHeight(pass.h)} antenna.</span>
+          {button && (
+            <>
+              {' '}
+              <button class="btn small" onClick={() => (mapEarthAntRequested.value = false)}>
+                Observer height
+              </button>
+            </>
+          )}
+        </>
+      ) : pass.state === 'computing' ? (
+        <span>
+          Computing Earth from the {fmtHeight(pass.h)} antenna… {pass.pct}% <span class="muted">(showing the {fmtHeight(ho)} observer meanwhile)</span>
+        </span>
+      ) : (
+        <span class="muted">Earth from the {fmtHeight(ha)} antenna: waiting for the view…</span>
+      )}
     </div>
   );
 }

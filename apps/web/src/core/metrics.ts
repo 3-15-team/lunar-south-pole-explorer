@@ -38,6 +38,9 @@ export function evalAt(ctx: SiteContext, t: number): Instant {
   const s = sunTopo(ctx.frame, v);
   const e = earthTopo(ctx.frame, v);
   const H = (az: number) => profileAt(ctx.profile.elev, az);
+  // Earth link: horizon from the antenna height when it differs from the observer (core/antenna.ts)
+  const elevE = ctx.profile.elevEarth ?? ctx.profile.elev;
+  const HE = elevE === ctx.profile.elev ? H : (az: number) => profileAt(elevE, az);
   return {
     t,
     sunAz: s.az,
@@ -49,9 +52,9 @@ export function evalAt(ctx: SiteContext, t: number): Instant {
     earthEl: e.el,
     earthR: e.r,
     earthDistKm: e.distKm,
-    fEarth: diskFraction(H, e.az, e.el, e.r),
+    fEarth: diskFraction(HE, e.az, e.el, e.r),
     horizonAtSun: H(s.az),
-    horizonAtEarth: H(e.az),
+    horizonAtEarth: HE(e.az),
   };
 }
 

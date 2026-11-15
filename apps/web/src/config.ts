@@ -39,6 +39,20 @@ export interface RuntimeConfig {
    * Env PANO_MICRO_DEFAULT=on|off (→ /config.json) or URL ?micro=on|off override this default.
    */
   panoMicroDefault: boolean;
+  /**
+   * When the map's Earth-visibility (and Suitability) layer is recomputed for the antenna height
+   * (ADR-122; costs a second GPU horizon pass, so it is never done for other layers):
+   *   layer  — automatically while such a layer is shown and the antenna ≠ observer height;
+   *   button — only after the user presses "Use antenna" in the layer panel.
+   * Env MAP_EARTH_ANTENNA=layer|button (→ /config.json) or URL ?earthant=layer|button.
+   */
+  mapEarthAntenna: MapEarthAntenna;
+}
+
+export type MapEarthAntenna = 'layer' | 'button';
+export function parseEarthAntenna(v: unknown): MapEarthAntenna | undefined {
+  const s = typeof v === 'string' ? v.trim().toLowerCase() : '';
+  return s === 'layer' || s === 'button' ? s : undefined;
 }
 
 export const DEFAULT_CONFIG: RuntimeConfig = {
@@ -48,6 +62,8 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
   // ▼ THE default for the micro-relief toggle (ADR-118). Single source of truth: infra passes nothing
   //   unless PANO_MICRO_DEFAULT is set explicitly.
   panoMicroDefault: true,
+  // ▼ THE default for the map's antenna Earth layer (ADR-122); infra writes it only when set
+  mapEarthAntenna: 'layer',
 };
 
 export const config: RuntimeConfig = { ...DEFAULT_CONFIG };
@@ -80,7 +96,7 @@ export function parseOnOff(v: unknown): boolean | undefined {
   return undefined;
 }
 
-/** Merge /config.json and the URL overrides (?interp=…, ?raa=…, ?micro=…) into `config`. Never throws. */
+/** Merge /config.json and the URL overrides (?interp=…, ?raa=…, ?micro=…, ?earthant=…) into `config`. Never throws. */
 export async function loadConfig(url: string, search = window.location.search, timeoutMs = 1500): Promise<RuntimeConfig> {
   try {
     const ctl = new AbortController();
@@ -97,6 +113,8 @@ export async function loadConfig(url: string, search = window.location.search, t
       if (mc !== undefined) config.panoMicro = mc;
       const md = parseOnOff(j.panoMicroDefault);
       if (md !== undefined) config.panoMicroDefault = md;
+      const ea = parseEarthAntenna(j.mapEarthAntenna);
+      if (ea) config.mapEarthAntenna = ea;
     }
   } catch {
     // no runtime config (vite dev, static hosting): keep defaults
@@ -111,6 +129,8 @@ export async function loadConfig(url: string, search = window.location.search, t
   const qm = qOn === undefined ? parseMicro(qmRaw) : undefined;
   if (qOn !== undefined) config.panoMicroDefault = qOn;
   if (qm !== undefined) config.panoMicro = qm;
+  const qea = parseEarthAntenna(new URLSearchParams(search).get('earthant'));
+  if (qea) config.mapEarthAntenna = qea;
   return config;
 }
 

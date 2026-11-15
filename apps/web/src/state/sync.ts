@@ -13,6 +13,7 @@ import {
   catalog,
   dte,
   footprint,
+  hAnt,
   hObs,
   instant,
   interval,
@@ -46,6 +47,7 @@ export function applyHash(hash: string): void {
     if (u.time !== undefined) time.value = u.time;
     if (u.interval) interval.value = u.interval;
     if (u.hObs !== undefined) hObs.value = u.hObs;
+    if (u.hAnt !== undefined) hAnt.value = u.hAnt;
     if (u.dte !== undefined) dte.value = u.dte;
     if (u.layer) layer.value = u.layer;
     if (u.footprint !== undefined) footprint.value = u.footprint;
@@ -68,6 +70,7 @@ export function initUrlSync(): void {
       time: time.value,
       interval: interval.value,
       hObs: hObs.value,
+      hAnt: hAnt.value,
       dte: dte.value,
       layer: layer.value,
       footprint: footprint.value,
@@ -114,6 +117,7 @@ export function initCompute(client: SiteClient): void {
   effect(() => {
     const s = site.value;
     const h = hObs.value;
+    const ha = hAnt.value;
     const token = ++profileToken;
     if (!s) return;
     if (s.inCoverage === false || s.lat > -79.9) {
@@ -127,7 +131,7 @@ export function initCompute(client: SiteClient): void {
     siteError.value = null;
     status.value = `Computing terrain horizon for ${s.name}…`;
     client
-      .profile(s.x, s.y, h)
+      .profile(s.x, s.y, h, ha)
       .then((r) => {
         if (token !== profileToken) return;
         siteResult.value = { key: r.key, site: s, profile: r.profile };
@@ -205,6 +209,7 @@ export function initCompute(client: SiteClient): void {
     const slip = slipDays.value * DAY;
     const d = dte.value;
     const h = hObs.value;
+    const ha = hAnt.value;
     const cat = catalog.value;
     const next: Record<string, ScenarioResult> = {};
     for (const sc of list) next[sc.id] = { loading: true, ...scenarioResults.peek()[sc.id] };
@@ -217,7 +222,7 @@ export function initCompute(client: SiteClient): void {
         continue;
       }
       client
-        .profile(s.x, s.y, h)
+        .profile(s.x, s.y, h, ha)
         .then((p) =>
           Promise.all([
             client.metrics(p.key, sc.t0, sc.t1, sc.t0, d),
@@ -238,12 +243,13 @@ export async function computeCalendar(client: SiteClient, days = 60): Promise<vo
     : [siteRef.peek(), ...cat.filter((s) => s.kind === 'pgda-5m' && s.inCoverage !== false).slice(0, 7).map((s) => ({ kind: 'catalog' as const, id: s.id }))];
   const uniq = [...new Map(refs.map((r) => [refKey(r), r])).values()];
   const h = hObs.peek();
+  const ha = hAnt.peek();
   const rows: { key: string; label: string }[] = [];
   for (const r of uniq) {
     const s = resolveSite(r, cat);
     if (!s || s.lat > -79.9) continue;
     try {
-      const p = await client.profile(s.x, s.y, h);
+      const p = await client.profile(s.x, s.y, h, ha);
       rows.push({ key: p.key, label: s.name });
     } catch {
       /* skip */

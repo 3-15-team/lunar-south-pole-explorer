@@ -248,6 +248,8 @@ uniform float uAmbient;
 uniform int uShadows;
 uniform float uShadowAlpha;
 uniform sampler2D uInt;
+uniform sampler2D uIntAnt;   // interval result from the antenna height (Earth share only, ADR-122)
+uniform float uAntValid;
 uniform sampler2D uFeat;
 uniform vec4 uGrid;
 uniform vec2 uGridSize;
@@ -367,6 +369,7 @@ void main() {
       lc = slopeColor(slopeDeg); alpha = 0.85;
     } else if (inGrid && uGridValid > 0.5) {
       vec4 iv = texture(uInt, guv);
+      if (uAntValid > 0.5) iv.g = texture(uIntAnt, guv).g;
       if (iv.r >= 0.0) {
         if (uLayer == 2) { lc = cividis(iv.r); alpha = 0.85; }
         else if (uLayer == 3) { lc = cividis(iv.g); alpha = 0.85; }

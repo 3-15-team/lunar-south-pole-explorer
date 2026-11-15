@@ -1,5 +1,5 @@
 # Lunar South Pole Site Explorer — NASA Space Apps 2026
-# Empty machine (git + make + Docker): make bootstrap [DATA=min]    → http://localhost:8642
+# Fresh clone:         make bootstrap [DATA=min]                  → http://localhost:8642
 # Quick start (local):  make setup && make data-min && make dev   → http://localhost:5173
 # Primary demo:         make up                                     → http://localhost:8642
 # GNU make 3.81 compatible (macOS default).
@@ -28,7 +28,7 @@ COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-d
 export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA PANO_MICRO PANO_MICRO_DEFAULT MAP_EARTH_ANTENNA
 
 .DEFAULT_GOAL := help
-.PHONY: bootstrap bootstrap-native data-docker help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
+.PHONY: bootstrap help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
         data-sites data-psr data-horizon data-heatmaps data-micro data-outer data-pull data-status validate dev web-dev \
         compute-dev web-build web-preview up up-ai down logs ps lint typecheck test test-py test-web \
         build smoke verify dist serve-dist deploy clean clean-data
@@ -39,25 +39,29 @@ help: ## Show this help
 	  awk -F'|' '{printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 # ---------------------------------------------------------------- from an empty machine
-bootstrap: ## EVERYTHING from a fresh clone (needs only Docker): data download+build, start, smoke. DATA=full or min
-	@DATA=$(DATA) COMPOSE_PORT=$(COMPOSE_PORT) bash infra/scripts/bootstrap.sh docker
-
-bootstrap-native: ## Same without Docker (python3 >= 3.11, node >= 20): .venv, npm, data, web build. DATA=full or min
-	@DATA=$(DATA) bash infra/scripts/bootstrap.sh native
-
-data-docker: ## Download + build data/ inside Docker (no local Python needed). DATA=full or min
-	@DATA=$(DATA) bash infra/scripts/bootstrap.sh data
+bootstrap: ## Fresh clone -> running app: setup, data (DATA=full or min), up, smoke. Done steps are skipped
+	$(MAKE) setup
+	$(MAKE) $(if $(filter min,$(DATA)),data-min,data)
+	$(MAKE) up
+	@for i in $$(seq 30); do curl -fsS -o /dev/null http://localhost:$(COMPOSE_PORT)/ && break; sleep 1; done
+	$(MAKE) smoke
 
 # ---------------------------------------------------------------- setup
 setup: setup-py setup-web ## Install Python venv (.venv) and web dependencies
 
-setup-py: ## Python venv + pipeline/compute/dev requirements + editable lunarcore
+setup-py: $(VENV)/.installed ## Python venv + pipeline/compute/dev requirements + editable lunarcore
+
+$(VENV)/.installed: requirements-dev.txt pipeline/requirements.txt services/compute/requirements.txt libs/lunarcore/pyproject.toml
 	@test -x $(PY) || $(PYTHON_BOOT) -m venv $(VENV)
 	$(PY) -m pip install -q -U pip wheel
 	$(PY) -m pip install -q -r requirements-dev.txt -e libs/lunarcore
+	@touch $@
 
-setup-web: ## npm install for apps/web
+setup-web: $(WEB)/node_modules/.installed ## npm install for apps/web
+
+$(WEB)/node_modules/.installed: $(WEB)/package-lock.json
 	cd $(WEB) && ($(NPM) ci --no-audit --no-fund || $(NPM) install --no-audit --no-fund)
+	@touch $@
 
 doctor: ## Check tools, versions, disk, data presence/checksums, ports
 	@bash infra/scripts/doctor.sh

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { config, DEFAULT_CONFIG, INTERP_BC, loadConfig, mnKernel, parseInterp, parseMicro, parseOnOff, parseReliefAA } from '../src/config';
+import { config, DEFAULT_CONFIG, INTERP_BC, loadConfig, mnKernel, parseEarthAntenna, parseInterp, parseMicro, parseOnOff, parseReliefAA } from '../src/config';
 
 const json = (body: unknown) =>
   ({ ok: true, headers: new Headers({ 'content-type': 'application/json' }), json: async () => body }) as unknown as Response;
@@ -37,6 +37,16 @@ describe('runtime config', () => {
     expect([c.panoMicroDefault, c.panoMicro]).toEqual([false, 0.5]);
   });
 
+  it('map antenna Earth layer mode: config.json, then ?earthant=', async () => {
+    expect(parseEarthAntenna(' Button ')).toBe('button');
+    expect(parseEarthAntenna('auto')).toBeUndefined();
+    vi.stubGlobal('fetch', vi.fn(async () => json({ mapEarthAntenna: 'button' })));
+    let c = await loadConfig('/config.json', '');
+    expect(c.mapEarthAntenna).toBe('button');
+    c = await loadConfig('/config.json', '?earthant=layer');
+    expect(c.mapEarthAntenna).toBe('layer');
+  });
+
   it('parseMicro clamps to [0, 3]', () => {
     expect(parseMicro('0.6')).toBe(0.6);
     expect(parseMicro(9)).toBe(3);
@@ -44,7 +54,7 @@ describe('runtime config', () => {
   });
 
   it('defaults: Catmull-Rom heights, one-pixel relief footprint, micro-relief on', () => {
-    expect(DEFAULT_CONFIG).toEqual({ panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1, panoMicroDefault: true });
+    expect(DEFAULT_CONFIG).toEqual({ panoTerrainInterp: 'catmull', panoReliefAA: 1, panoMicro: 1, panoMicroDefault: true, mapEarthAntenna: 'layer' });
   });
 
   it('config.json overrides the default, URL overrides config.json', async () => {

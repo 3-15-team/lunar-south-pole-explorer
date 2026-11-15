@@ -151,6 +151,8 @@ table.cmp thead th { text-align: right; font-size: 10px; }
 .ant-q td { padding: 2px 0; color: #c9d1db; }
 .ant-q td:last-child { text-align: right; font-family: var(--mono); }
 .c-warn { color: var(--warn); }
+.ant-ctl { max-width: 280px; background: rgba(11,14,19,0.85); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+.ant-ctl .btn { margin-top: 4px; }
 .c-ant { color: #ffd45e; }
 .skyplot { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
 .sky-canvas { width: 100%; height: 190px; display: block; border-radius: 4px; }

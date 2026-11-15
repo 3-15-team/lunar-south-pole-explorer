@@ -24,5 +24,13 @@ case "${PANO_MICRO_DEFAULT:-}" in
   on|off) mdef=", \"panoMicroDefault\": \"${PANO_MICRO_DEFAULT}\"" ;;
   *) echo "web-config: PANO_MICRO_DEFAULT='${PANO_MICRO_DEFAULT}' must be on|off, ignored" >&2 ;;
 esac
-printf '{"panoTerrainInterp": "%s", "panoReliefAA": %s, "panoMicro": %s%s}\n' "$interp" "$raa" "$micro" "$mdef" > /usr/share/nginx/html/config.json
+# when the map's Earth layer is recomputed for the antenna height (ADR-122): layer|button; only
+# written when set, the default lives in apps/web/src/config.ts (DEFAULT_CONFIG.mapEarthAntenna)
+eant=""
+case "${MAP_EARTH_ANTENNA:-}" in
+  '') ;;
+  layer|button) eant=", \"mapEarthAntenna\": \"${MAP_EARTH_ANTENNA}\"" ;;
+  *) echo "web-config: MAP_EARTH_ANTENNA='${MAP_EARTH_ANTENNA}' must be layer|button, ignored" >&2 ;;
+esac
+printf '{"panoTerrainInterp": "%s", "panoReliefAA": %s, "panoMicro": %s%s%s}\n' "$interp" "$raa" "$micro" "$mdef" "$eant" > /usr/share/nginx/html/config.json
 echo "web-config: $(cat /usr/share/nginx/html/config.json)"

@@ -17,6 +17,7 @@ services:
       PANO_MICRO: "${PANO_MICRO:-1}"
       # initial state of the panorama "Micro-relief" toggle: on|off; empty = app default (config.ts)
       PANO_MICRO_DEFAULT: "${PANO_MICRO_DEFAULT:-}"
+      MAP_EARTH_ANTENNA: "${MAP_EARTH_ANTENNA:-}"
     volumes:
       - ./data/web:/usr/share/nginx/html/data:ro
     restart: unless-stopped

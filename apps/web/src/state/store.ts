@@ -75,6 +75,8 @@ export const interval = signal<[number, number]>([hourFloor(Date.now()), hourFlo
 export const hObs = signal(2);
 /** Earth-link antenna height above the site's terrain, m (Earth visibility / DTE metrics; core/antenna.ts). */
 export const hAnt = signal(2);
+/** Map: user asked for the Earth layer from the antenna ("button" mode of config.mapEarthAntenna). */
+export const mapEarthAntRequested = signal(false);
 export const dte = signal(0.5);
 export const layer = signal<Layer>('relief');
 export const footprint = signal(50);

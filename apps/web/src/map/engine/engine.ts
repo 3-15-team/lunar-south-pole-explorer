@@ -10,12 +10,19 @@ import { DISPLAY_FRAG, FEATURE_FRAG, HORIZON_FRAG, INTERVAL_FRAG, VERT } from '.
 export type EngineLayer = 'relief' | 'shadow' | 'illum' | 'earth' | 'dark' | 'slope' | 'suit';
 const LAYER_ID: Record<EngineLayer, number> = { relief: 0, shadow: 1, illum: 2, earth: 3, dark: 4, slope: 5, suit: 6 };
 const NEEDS_GRID: EngineLayer[] = ['illum', 'earth', 'dark', 'suit'];
+/** Layers whose Earth share comes from the antenna pass when one is requested (ADR-122). */
+const ANT_LAYERS: EngineLayer[] = ['earth', 'suit'];
+
+/** Earth-from-antenna pass: off (not requested / same height), computing, or ready. */
+export type AntennaPassState = { state: 'off' } | { state: 'computing'; h: number; pct: number } | { state: 'ready'; h: number };
 
 export interface EngineParams {
   time: number;
   interval: [number, number];
   layer: EngineLayer;
   obsH: number;
+  /** Antenna height for the Earth share of the earth/suit layers; null = not requested (ADR-122). */
+  antH: number | null;
   dte: number;
   footprint: number;
   weights: Weights;
@@ -75,6 +82,20 @@ export class TerrainEngine {
   private ephTex: WebGLTexture;
   private intKey = '';
   private featKey = '';
+  /** Second horizon set + interval result on the same grid, from the antenna height (on demand). */
+  private antPend: WebGLTexture | null = null;
+  private antHor: WebGLTexture | null = null;
+  private antSize = [0, 0];
+  private antGroup = GROUPS;
+  private antJobKey = '';
+  private antDoneKey = '';
+  private intAntTex: WebGLTexture | null = null;
+  private intAntKey = '';
+  private antValid = false;
+  private antState: AntennaPassState = { state: 'off' };
+  onAntenna: (s: AntennaPassState) => void = () => {};
+  private ephKey = '';
+  private ephK = 0;
   private lastInteractAt = 0;
   private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -325,6 +346,10 @@ export class TerrainEngine {
     this.featValid = false;
     this.intKey = '';
     this.featKey = '';
+    this.antJobKey = '';
+    this.antDoneKey = '';
+    this.intAntKey = '';
+    this.antValid = false;
   }
 
   private wantGrid(fs: FrameLike): void {
@@ -396,26 +421,33 @@ export class TerrainEngine {
     gl.uniform1f(u('uMaxRho'), this.dem.maxRho);
   }
 
-  private runHorizonGroups(count: number): void {
-    const g = this.pendingGrid;
-    if (!g || !this.horPend || this.horGroup >= GROUPS) return;
+  /** Ray-trace `count` azimuth groups of grid `g` from height `obsH` into layered texture `tex`. */
+  private drawHorizonGroups(g: Grid, tex: WebGLTexture, from: number, count: number, obsH: number): number {
     const gl = this.gl;
     const u = this.use(this.progs.horizon);
     this.bindDem(u);
     gl.uniform4f(u('uGrid'), g.x0, g.yTop, g.sp, 0);
     gl.uniform1f(u('uNaz'), NAZ);
-    gl.uniform1f(u('uObsH'), this.params?.obsH ?? 2);
+    gl.uniform1f(u('uObsH'), obsH);
     gl.uniform1f(u('uAlpha'), 0.02);
     gl.uniform1f(u('uMaxDist'), 200000);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
     gl.viewport(0, 0, g.nx, g.ny);
     gl.bindVertexArray(this.vao);
-    for (let k = 0; k < count && this.horGroup < GROUPS; k++, this.horGroup++) {
-      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.horPend, 0, this.horGroup);
-      gl.uniform1i(u('uGroup'), this.horGroup);
+    let k = from;
+    for (; k < from + count && k < GROUPS; k++) {
+      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tex, 0, k);
+      gl.uniform1i(u('uGroup'), k);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return k;
+  }
+
+  private runHorizonGroups(count: number): void {
+    const g = this.pendingGrid;
+    if (!g || !this.horPend || this.horGroup >= GROUPS) return;
+    this.horGroup = this.drawHorizonGroups(g, this.horPend, this.horGroup, count, this.params?.obsH ?? 2);
     this.onStatus(this.horGroup < GROUPS ? `Ray-tracing horizons ${Math.round((100 * this.horGroup) / GROUPS)}%` : 'Horizons ready');
     if (this.horGroup >= GROUPS) {
       const t = this.horTex;
@@ -425,7 +457,71 @@ export class TerrainEngine {
       this.pendingGrid = null;
       this.intKey = '';
       this.featKey = '';
+      this.antValid = false;
     }
+  }
+
+  private setAntState(s: AntennaPassState): void {
+    const a = this.antState;
+    const same =
+      a.state === s.state && (a.state === 'off' || (a as { h: number }).h === (s as { h: number }).h) && (a.state !== 'computing' || (a as { pct: number }).pct === (s as { pct: number }).pct);
+    if (same) return;
+    this.antState = s;
+    this.onAntenna(s);
+  }
+
+  /**
+   * Earth share from the antenna height (ADR-122): a second horizon set on the current grid and a
+   * second interval pass, only while requested (params.antH) and an Earth-using layer is shown.
+   * Returns true while work remains.
+   */
+  private runAntenna(): boolean {
+    const p = this.params!;
+    const g = this.grid;
+    const h = p.antH;
+    if (h === null || h === p.obsH || !ANT_LAYERS.includes(p.layer) || !g || !this.horTex) {
+      this.antValid = false;
+      this.setAntState({ state: 'off' });
+      return false;
+    }
+    const job = `${g.key}|${h}`;
+    if (this.antDoneKey !== job) {
+      this.antValid = false;
+      const gl = this.gl;
+      if (this.antJobKey !== job) {
+        if (!this.antPend || this.antSize[0] !== g.nx || this.antSize[1] !== g.ny) {
+          if (this.antPend) gl.deleteTexture(this.antPend);
+          if (this.antHor) gl.deleteTexture(this.antHor);
+          this.antPend = this.floatTex(g.nx, g.ny, gl.RGBA16F, GROUPS);
+          this.antHor = null;
+          this.antSize = [g.nx, g.ny];
+        }
+        this.antJobKey = job;
+        this.antGroup = 0;
+      }
+      this.antGroup = this.drawHorizonGroups(g, this.antPend!, this.antGroup, 2, h);
+      const pct = Math.round((100 * this.antGroup) / GROUPS);
+      this.onStatus(this.antGroup < GROUPS ? `Ray-tracing horizons from the ${h} m antenna ${pct}%` : 'Antenna horizons ready');
+      this.setAntState({ state: 'computing', h, pct });
+      if (this.antGroup < GROUPS) return true;
+      const t = this.antHor;
+      this.antHor = this.antPend;
+      this.antPend = t ?? this.floatTex(g.nx, g.ny, this.gl.RGBA16F, GROUPS);
+      this.antDoneKey = job;
+      this.intAntKey = '';
+    }
+    const [t0, t1] = p.interval;
+    const key = `${job}|${t0}|${t1}|${p.dte}`;
+    if (key !== this.intAntKey) {
+      const K = this.prepEph(t0, t1);
+      if (K === null) return true;
+      this.ensureResultTex();
+      this.drawInterval(g, this.antHor!, this.intAntTex!, h, p.dte, K, (t1 - t0) / (K - 1));
+      this.intAntKey = key;
+    }
+    this.antValid = true;
+    this.setAntState({ state: 'ready', h });
+    return false;
   }
 
   private ensureResultTex(): void {
@@ -435,23 +531,25 @@ export class TerrainEngine {
     if (this.resultSize !== sizeKey) {
       if (this.intTex) gl.deleteTexture(this.intTex);
       if (this.featTex) gl.deleteTexture(this.featTex);
+      if (this.intAntTex) gl.deleteTexture(this.intAntTex);
       this.intTex = this.floatTex(g.nx, g.ny, gl.RGBA32F);
       this.featTex = this.floatTex(g.nx, g.ny, gl.RGBA32F);
+      this.intAntTex = this.floatTex(g.nx, g.ny, gl.RGBA32F);
       this.resultSize = sizeKey;
       this.intKey = '';
       this.featKey = '';
+      this.intAntKey = '';
+      this.antValid = false;
     }
   }
 
-  private runInterval(): boolean {
-    const p = this.params!;
-    const g = this.grid!;
-    const [t0, t1] = p.interval;
-    const key = `${g.key}|${t0}|${t1}|${p.dte}|${p.obsH}`;
-    if (key === this.intKey) return true;
+  /** Upload Sun/Earth positions for [t0, t1] (cached); K samples, or null while loading. */
+  private prepEph(t0: number, t1: number): number | null {
+    const k = `${t0}|${t1}`;
+    if (k === this.ephKey) return this.ephK;
     if (!this.eph.isLoaded(t0) || !this.eph.isLoaded(t1)) {
       this.eph.ensureRange(t0, t1).then(() => this.onNeedRender());
-      return false;
+      return null;
     }
     const K = Math.max(16, Math.min(2048, Math.ceil((t1 - t0) / 1800e3) + 1));
     const step = (t1 - t0) / (K - 1);
@@ -469,11 +567,17 @@ export class TerrainEngine {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, K, 2, 0, gl.RGBA, gl.FLOAT, data);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    this.ensureResultTex();
+    this.ephKey = k;
+    this.ephK = K;
+    return K;
+  }
+
+  private drawInterval(g: Grid, hor: WebGLTexture, out: WebGLTexture, obsH: number, dte: number, K: number, step: number): void {
+    const gl = this.gl;
     const u = this.use(this.progs.interval);
     this.bindDem(u);
     gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.horTex);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, hor);
     gl.uniform1i(u('uHor'), 2);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.ephTex);
@@ -482,15 +586,27 @@ export class TerrainEngine {
     gl.uniform2f(u('uGridSize'), g.nx, g.ny);
     gl.uniform1i(u('uK'), K);
     gl.uniform1f(u('uStepH'), step / 3600e3);
-    gl.uniform1f(u('uDte'), p.dte);
+    gl.uniform1f(u('uDte'), dte);
     gl.uniform1f(u('uNaz'), NAZ);
-    gl.uniform1f(u('uObsH'), p.obsH);
+    gl.uniform1f(u('uObsH'), obsH);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.intTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, out, 0);
     gl.viewport(0, 0, g.nx, g.ny);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  private runInterval(): boolean {
+    const p = this.params!;
+    const g = this.grid!;
+    const [t0, t1] = p.interval;
+    const key = `${g.key}|${t0}|${t1}|${p.dte}|${p.obsH}`;
+    if (key === this.intKey) return true;
+    const K = this.prepEph(t0, t1);
+    if (K === null) return false;
+    this.ensureResultTex();
+    this.drawInterval(g, this.horTex!, this.intTex!, p.obsH, p.dte, K, (t1 - t0) / (K - 1));
     this.intKey = key;
     this.gridValid = true;
     return true;
@@ -545,6 +661,7 @@ export class TerrainEngine {
       }
       if (this.grid && this.horTex && NEEDS_GRID.includes(p.layer)) {
         if (!this.runInterval()) more = true;
+        else if (this.runAntenna()) more = true;
         if (p.layer === 'suit') this.runFeatures();
       }
     } else if (NEEDS_GRID.includes(p.layer)) {
@@ -585,6 +702,12 @@ export class TerrainEngine {
     gl.uniform1f(u('uFootM'), p.footprint);
     gl.uniform1f(u('uSlopeLimit'), p.slopeLimit);
     gl.uniform1f(u('uDarkRef'), p.darkRef);
+    // Earth share from the antenna pass for earth/suit when requested and ready (ADR-122)
+    const antOn = this.antValid && !!this.intAntTex && ANT_LAYERS.includes(p.layer);
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, antOn ? this.intAntTex : this.intTex);
+    gl.uniform1i(u('uIntAnt'), 5);
+    gl.uniform1f(u('uAntValid'), antOn ? 1 : 0);
     gl.activeTexture(gl.TEXTURE4);
     gl.bindTexture(gl.TEXTURE_2D, this.outerTex ?? this.farTex);
     gl.uniform1i(u('uOuter'), 4);
@@ -612,7 +735,7 @@ export class TerrainEngine {
   }
 
   /** Interval + feature values at map coordinate (x, y), when the analysis grid covers it. */
-  valuesAt(x: number, y: number): { illum: number; earth: number; dark: number; power: number; slopeMax?: number; relief?: number } | null {
+  valuesAt(x: number, y: number): { illum: number; earth: number; dark: number; power: number; slopeMax?: number; relief?: number; earthAntH?: number } | null {
     const g = this.grid;
     if (!g || !this.gridValid || !this.intTex) return null;
     const i = Math.floor((x - g.x0) / g.sp);
@@ -620,7 +743,11 @@ export class TerrainEngine {
     if (i < 0 || j < 0 || i >= g.nx || j >= g.ny) return null;
     const a = this.readTex(this.intTex, i, j, 1, 1);
     if (a[0] < 0) return null;
-    const r: { illum: number; earth: number; dark: number; power: number; slopeMax?: number; relief?: number } = { illum: a[0], earth: a[1], dark: a[2], power: a[3] };
+    const r: { illum: number; earth: number; dark: number; power: number; slopeMax?: number; relief?: number; earthAntH?: number } = { illum: a[0], earth: a[1], dark: a[2], power: a[3] };
+    if (this.antValid && this.intAntTex && this.params && ANT_LAYERS.includes(this.params.layer)) {
+      r.earth = this.readTex(this.intAntTex, i, j, 1, 1)[1];
+      r.earthAntH = this.params.antH ?? undefined;
+    }
     if (this.featValid && this.featTex) {
       const f = this.readTex(this.featTex, i, j, 1, 1);
       r.slopeMax = f[0];
@@ -636,6 +763,10 @@ export class TerrainEngine {
     if (!g || !p || !this.gridValid || !this.featValid || !this.intTex || !this.featTex) return null;
     const A = this.readTex(this.intTex, 0, 0, g.nx, g.ny);
     const F = this.readTex(this.featTex, 0, 0, g.nx, g.ny);
+    if (this.antValid && this.intAntTex && ANT_LAYERS.includes(p.layer)) {
+      const E = this.readTex(this.intAntTex, 0, 0, g.nx, g.ny);
+      for (let k = 0; k < g.nx * g.ny; k++) A[k * 4 + 1] = E[k * 4 + 1];
+    }
     const all: { i: number; s: number }[] = [];
     const sc = new Float32Array(g.nx * g.ny).fill(-1);
     for (let k = 0; k < g.nx * g.ny; k++) {

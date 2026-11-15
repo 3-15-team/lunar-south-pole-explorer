@@ -24,6 +24,7 @@ import {
   catalog,
   computeOnline,
   dte,
+  ephRange,
   footprint,
   hAnt,
   hObs,
@@ -40,6 +41,7 @@ import {
   site,
   siteRef,
   slopeLimit,
+  status,
   time,
   type Layer as LayerId,
 } from '../state/store';
@@ -86,12 +88,16 @@ export default function MapView() {
   const regionLayer = useRef(new ImageLayer({ opacity: 0.8, visible: false }));
   const [region, setRegion] = useState<{ label: string; busy?: boolean; error?: string } | null>(null);
   pegRef.current = pegArmed;
+  // DEM index + ephemeris load in parallel with the first render (main.tsx); ephRange is set once
+  // both are ready. The map waits for it instead of failing when it mounts first.
+  const dataReady = ephRange.value !== null;
 
   useEffect(() => {
+    if (!dataReady) return;
     const dem = services.dem;
     const eph = services.eph;
     if (!el.current || !dem || !eph) {
-      setErr('Terrain data not loaded yet — build it with `make data-min`.');
+      setErr('Terrain data not available — build it with `make data-min`.');
       return;
     }
     let engine: TerrainEngine;
@@ -307,7 +313,7 @@ export default function MapView() {
       engineRef.current = null;
       mapRef.current = null;
     };
-  }, []);
+  }, [dataReady]);
 
   const findCandidates = () => {
     const eng = engineRef.current;
@@ -386,6 +392,11 @@ export default function MapView() {
     <div class="mapwrap">
       <div ref={el} class="map" />
       {err && <div class="notice warn map-err">{err}</div>}
+      {!dataReady && !err && (
+        <div class={`notice map-err ${status.value.startsWith('Data not found') ? 'warn' : ''}`}>
+          {status.value.startsWith('Data not found') ? status.value : 'Loading terrain data…'}
+        </div>
+      )}
       <div class="map-ui top-left">
         <div class="layer-switch" role="radiogroup" aria-label="Map layer">
           {LAYERS.map((l) => (

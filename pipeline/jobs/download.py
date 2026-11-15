@@ -201,7 +201,11 @@ def main() -> None:
                 continue
             print(f"[{f['id']}] {f['url']}")
             dest = RAW / f["dest"]
-            size, digest = fetch(f["url"], dest, f.get("size"), f.get("sha256"))
+            known = man.get("files", {}).get(f["id"], {})
+            if known.get("url") != f["url"]:
+                known = {}
+            size, digest = fetch(f["url"], dest, f.get("size", known.get("size")),
+                                 f.get("sha256", known.get("sha256")))
             man = load_manifest()  # re-read: several downloader processes may run in parallel
             man["files"][f["id"]] = {
                 "url": f["url"], "path": str(dest.relative_to(DATA)), "size": size, "sha256": digest,

@@ -1,0 +1,83 @@
+name: lunar-local
+
+x-science: &science
+  build:
+    context: .
+    dockerfile: infra/science.Dockerfile
+  environment: &science-env
+    DATA_DIR: /data
+    PYTHONPATH: /app/services/compute
+    DATA_TIER: ${DATA_TIER:-0}
+    REGION_RES: ${REGION_RES:-1920}
+    NUMBA_CACHE_DIR: /data/work/numba-cache
+    NUMBA_NUM_THREADS: ${SCIENCE_THREADS:-4}
+  volumes:
+    - lunar-data:/data
+  init: true
+
+services:
+  data-init:
+    <<: *science
+    command: ["python", "-m", "pipeline.bootstrap"]
+
+  compute:
+    <<: *science
+    command: ["python", "-m", "uvicorn", "app.main:app", "--app-dir", "services/compute", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      start_period: 60s
+      retries: 6
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    ports:
+      - "127.0.0.1:${COMPOSE_PORT:-8642}:80"
+    environment:
+      PANO_TERRAIN_INTERP: ${PANO_TERRAIN_INTERP:-catmull}
+      PANO_RELIEF_AA: ${PANO_RELIEF_AA:-1}
+      PANO_MICRO: ${PANO_MICRO:-1}
+      PANO_MICRO_DEFAULT: ${PANO_MICRO_DEFAULT:-}
+    volumes:
+      - lunar-data:/data:ro
+    depends_on:
+      compute:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  science:
+    <<: *science
+    profiles: ["tools"]
+    command: ["python", "tools/project.py", "test-py"]
+
+  web-check:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+      target: check
+    volumes:
+      - lunar-data:/app/data:ro
+
+  smoke:
+    <<: *science
+    profiles: ["tools"]
+    command: ["python", "tools/project.py", "smoke", "http://web", "--analysis"]
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  lunar-data:

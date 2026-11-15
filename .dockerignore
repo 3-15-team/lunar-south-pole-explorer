@@ -1,5 +1,6 @@
 # keep the build context small: data is mounted, never copied
-data
+data/*
+!data/manifest.json
 **/node_modules
 .venv
 **/__pycache__

@@ -10,7 +10,7 @@ PATH = DOCS / "VALIDATION.md"
 HEADER = """# VALIDATION
 
 How we check that our numbers are right. Sections marked *generated* are rewritten by the pipeline jobs
-(`make validate`); text outside the markers is hand-written. Reference rasters are used **only** as a
+(`just validate`); text outside the markers is hand-written. Reference rasters are used **only** as a
 sanity check — every product shown in the app is computed by us.
 """
 

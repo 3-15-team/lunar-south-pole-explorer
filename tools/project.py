@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -61,7 +62,7 @@ def smoke(base: str, analysis: bool = False) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("task", choices=["test-py", "lint", "smoke", "data", "dist", "doctor", "validate"])
+    parser.add_argument("task", choices=["test-py", "lint", "smoke", "data", "dist", "doctor", "validate", "api-smoke"])
     parser.add_argument("args", nargs="*")
     parser.add_argument("--analysis", action="store_true")
     options = parser.parse_args()
@@ -71,6 +72,28 @@ def main() -> None:
         run(sys.executable, "-m", "ruff", "check", "libs", "pipeline", "services", "tools")
     elif options.task == "smoke":
         smoke(options.args[0] if options.args else "http://localhost:8642", options.analysis)
+    elif options.task == "api-smoke":
+        server = subprocess.Popen([sys.executable, "-m", "uvicorn", "app.main:app", "--app-dir",
+                                   "services/compute", "--host", "127.0.0.1", "--port", "8000"], cwd=ROOT)
+        try:
+            for attempt in range(60):
+                if server.poll() is not None:
+                    raise RuntimeError("Compute server exited before becoming ready")
+                try:
+                    with urllib.request.urlopen("http://127.0.0.1:8000/api/v1/info", timeout=2) as response:
+                        assert "capabilities" in json.load(response)
+                    break
+                except OSError:
+                    if attempt == 59:
+                        raise
+                    time.sleep(0.5)
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait()
     elif options.task == "data":
         jobs = {"ephem": "ephemeris", "tiles": "dem_tiles", "horizon": "horizon_maps",
                 "heatmaps": "prebake", "micro": "micro_relief", "outer": "outer_dem",

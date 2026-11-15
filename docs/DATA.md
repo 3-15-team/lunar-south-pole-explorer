@@ -170,5 +170,5 @@ Seam check at ρ = 290 km vs the polar z0 tiles: mean 6 m, RMS 212 m (resolution
 
 `{"version": 1, "files": {"<id>": {"url", "path", "size", "sha256", "license",
 "description", "job", "fetched_utc"}}, "products": {"<name>": {"path", "sha256", "job"}}}`.
-`make data-pull` restores processed products from `DATA_BASE_URL` using this file
+`just data pull` restores processed products from `DATA_BASE_URL` using this file
 instead of recomputing (cloud-agnostic; any static file host works).

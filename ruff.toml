@@ -1,4 +1,4 @@
-# Python lint config for libs/, pipeline/, services/ (make lint).
+# Python lint config for libs/, pipeline/, services/ (just lint).
 line-length = 120
 target-version = "py312"
 extend-exclude = ["data", "apps", ".venv", "dist-static"]

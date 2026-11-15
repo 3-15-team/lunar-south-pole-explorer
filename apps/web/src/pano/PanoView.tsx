@@ -172,7 +172,7 @@ export default function PanoView() {
             disabled={microMissing}
             title={
               microMissing
-                ? 'Micro-relief tiles are not built (make data-micro)'
+                ? 'Micro-relief tiles are not available in this dataset'
                 : 'Synthetic sub-DEM relief: craters and rocks drawn from published size distributions, lit by the real Sun (not imagery)'
             }
             onClick={() => (microRelief.value = !microRelief.value)}

@@ -86,7 +86,7 @@ export default function MapView() {
     const dem = services.dem;
     const eph = services.eph;
     if (!el.current || !dem || !eph) {
-      setErr('Terrain data not loaded yet — build it with `make data-min`.');
+      setErr('Terrain data not loaded yet. Complete the local dataset setup and reload.');
       return;
     }
     let engine: TerrainEngine;

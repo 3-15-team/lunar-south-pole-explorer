@@ -9,7 +9,7 @@ Run: `cd services/compute && python -m uvicorn app.main:app --port 8000` (or `ma
 image `docker build -f services/compute/Dockerfile .` (context = project root) with `-v $PWD/data:/data`.
 Environment: `DATA_DIR` (default `<repo>/data`, `/data` in the image), `CACHE_DIR`, `REGION_RES` (240),
 `NUMBA_CACHE_DIR`. Interactive schema: `GET /docs` (OpenAPI). Products are loaded lazily and kept in memory:
-restart the service after rebuilding data (`make data-*`) so it picks up the new products and cache keys.
+restart the service after rebuilding data (`just data <job>`) so it picks up the new products and cache keys.
 
 Conventions: times are ISO-8601 UTC strings (`2026-12-01T00:00:00Z`); coordinates are MOON_ME lat/lon
 (degrees, east-positive) or LUNAR:SPS metres (`x`, `y`, DATA.md §1); azimuth clockwise from local North.

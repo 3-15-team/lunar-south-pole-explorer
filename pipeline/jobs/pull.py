@@ -1,4 +1,4 @@
-"""Restore processed products from a static mirror instead of recomputing (make data-pull).
+"""Restore processed products from a static mirror instead of recomputing (just data pull).
 
     DATA_BASE_URL=https://host/path python -m pipeline.jobs.pull [--only dem ephem ...]
 
@@ -55,8 +55,8 @@ def main(argv=None) -> None:
     base = os.environ.get("DATA_BASE_URL", "").strip()
     if not base:
         sys.exit("DATA_BASE_URL is not set. Point it at a static copy of the data/ directory, e.g.\n"
-                 "  make data-pull DATA_BASE_URL=https://example.org/lunar-data\n"
-                 "or rebuild locally with: make data")
+                 "  just data pull DATA_BASE_URL=https://example.org/lunar-data\n"
+                 "or rebuild locally with: just data-min")
     man = json.loads(MANIFEST.read_text())
     prods = man.get("products", {})
     if not prods:
@@ -73,7 +73,7 @@ def main(argv=None) -> None:
                 if not line.strip():
                     continue
                 sha, rel = line.split(None, 1)
-                if fetch(base, str(root / rel.strip()), sha):
+                if fetch(base, (root / rel.strip()).as_posix(), sha):
                     got += 1
                 else:
                     skipped += 1

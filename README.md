@@ -18,75 +18,88 @@ compare up to four scenarios side by side — including "what if the launch slip
 Everything in the challenge core runs **client-side** (static hosting works); the optional
 FastAPI `compute` service accelerates region-scale heatmaps and robustness Monte-Carlo.
 
-## Quick start
+## Quick start — Docker Compose
 
-Prerequisites: Node ≥ 20, Python 3.12, (optional) Docker; ~3 GB free disk for the minimal data set.
+Install Docker with Compose, then run this **single command** from a clean checkout:
 
-```bash
-cd lunar-south-pole-explorer
-make setup        # .venv + Python deps + npm install
-make data-min     # NAIF kernels + LOLA 80 m DEM → ephemeris tables, DEM tiles, sites, PSRs (~15 min, PGDA is slow)
-make dev          # web on http://localhost:5173 (+ compute API on :8000)
+```text
+docker compose up --build --wait --wait-timeout 3600
 ```
 
-Primary demo (works offline once data is built):
+Open **http://localhost:8642**. No host Python, Node, GNU Make, Bash, or cloud account is needed.
+The first run downloads real NASA data, generates scientific products, verifies them, and starts
+Nginx plus the compute API. Downloads and results persist in a named volume. First setup can take
+many minutes; inspect progress with `docker compose logs --follow data-init`. Subsequent starts reuse
+verified data and work offline once images and data exist.
 
-```bash
-make up           # docker compose: nginx (SPA + /data) + compute → http://localhost:8642
-make smoke        # check key endpoints
-make down
+Defaults: **80 m terrain (tier 0), 1920 m region overview**, no 5 m sites or height-error maps.
+For the larger scientific tier set `DATA_TIER=1` and `REGION_RES=240` in an optional root `.env`.
+This requires more disk, memory and generation time. See [complete local operation](docs/LOCAL.md)
+for settings, limitations, data persistence and containerized checks.
+
+```text
+docker compose --profile tools run --build --rm smoke
+docker compose down
 ```
 
-Panorama relief rendering is configurable at runtime (no rebuild; `?interp=…&raa=…` in the page URL
-overrides it for one tab):
+The smoke check tests real data and every compute operation; shutdown preserves the data volume.
+Cloud deployment remains undecided. The local stack uses no provider-specific services.
 
-- `PANO_TERRAIN_INTERP` = `bilinear` (original) | `catmull` (default; Catmull-Rom, passes through every
-  DEM sample, C1) | `mitchell` | `bspline` (C2, smoothest) — height-field interpolation for mesh, camera
-  height and shading normals.
-- `PANO_RELIEF_AA` = relief prefilter width as a multiple of the true pixel footprint on the ground
-  (default `1`; `2` = smoother relief; `0` = the original isotropic estimate). Filters relief detail only;
-  the image is not blurred.
-- `PANO_MICRO` = amplitude of the statistical sub-DEM micro-relief (default `1`; `0.6` = calmer; `0` = off →
-  the old procedural texture). Built by `make data-micro` (seconds; part of `make data` / `data-min`)
-  into `data/web/micro/`; without it the panorama silently uses the procedural texture.
-- The map shows the whole southern hemisphere: outside the high-res polar data (80°S, dashed ring) the
-  Moon is drawn from the LOLA global 16 px/deg DEM (`make data-outer`, seconds) with the same live Sun
-  shading and ray-marched shadows, slightly dimmer/cooler and without analysis layers.
-- Micro-relief can be switched on/off in the panorama ("Micro-relief" button). Its initial state defaults
-  to **on**; the single place to change that default is `DEFAULT_CONFIG.panoMicroDefault` in
-  `apps/web/src/config.ts`; per deployment `make up PANO_MICRO_DEFAULT=off`, per link `?micro=off`.
+## Just commands
 
-Example: `make up PANO_TERRAIN_INTERP=bspline PANO_RELIEF_AA=1.5`, or
-`http://localhost:8642/?interp=bilinear&raa=0#m=pano` for the original look.
+[Just](https://just.systems/) is the task interface (1.55+, tested with 1.59). GNU Make is no longer used.
+With only Just and Docker installed:
 
-Other useful targets (`make help` lists all):
+```text
+just compose-up
+just compose-check
+just compose-smoke
+just compose-down
+```
 
-| target | what |
+`just --list` shows all commands, including logs, status, and data preparation. Compose recipes do not
+invoke host Node/Python, and direct Docker Compose works without Just.
+
+For optional native development, install Node 22, Just, and [uv](https://docs.astral.sh/uv/) for Python:
+
+```text
+just setup
+just setup-py
+just data-min
+just dev
+```
+
+This starts Vite on :5173 and FastAPI on :8000. Native data lives under `data/`; Compose uses its
+own persistent volume. `just web-dev` runs Vite alone. Native tasks run in PowerShell on Windows
+and use portable Node/Python helpers instead of Bash, rsync or hardcoded virtualenv paths.
+
+| Command | Purpose |
 |---|---|
-| `make doctor` | tools, versions, disk, data presence/checksums, ports |
-| `make verify` | ruff + pytest + tsc + vitest + build (+ smoke if a stack is up) — the handoff gate |
-| `make data` | everything incl. 40 m DEM, 5 m site DEMs, region horizon maps, pre-baked heatmaps |
-| `make data-pull DATA_BASE_URL=…` | restore processed products from any static host instead of recomputing |
-| `make validate` | ephemeris vs JPL Horizons + reference illumination maps → `docs/VALIDATION.md` |
-| `make dist` / `make serve-dist` | self-contained static bundle (SPA + data) in `dist-static/` |
-| `make deploy DEPLOY_TARGET=static\|gcp\|azure` | provider-agnostic hooks (stubs; nothing runs until configured) |
+| `just check` | Frontend typecheck, tests, production build |
+| `just lint` / `just test-py` | Native Python lint / tests |
+| `just data status` | Native dataset status |
+| `just data <job>` | Individual pipeline job (see `just --list`) |
+| `just validate` | Native JPL Horizons / reference-map validation |
+| `just dist` / `just serve-dist` | Export / serve frontend plus native data as a static bundle |
+| `just compose-data-status` | Dataset status inside Compose |
 
-Keyboard: `Space` play/pause · `←/→` ±1 h (`Shift` ±1 day) on the playhead · `M` map · `P` panorama ·
-in the panorama `W A S D` walk (1.4 m/s, `Shift` 25 m/s), drag to look.
+Panorama settings are configured in `.env` and take effect on container startup without rebuilding:
+`PANO_TERRAIN_INTERP=bilinear|catmull|mitchell|bspline`, `PANO_RELIEF_AA=1`, `PANO_MICRO=1`,
+`PANO_MICRO_DEFAULT=on|off`. Browser query overrides remain available (`?interp=…&raa=…&micro=…`).
+
+Keyboard: `Space` play/pause · `←/→` ±1 h (`Shift` ±1 day) · `M` map · `P` panorama;
+`W A S D` walk, `Shift` accelerates, drag to look.
 
 ## Continuous integration
 
-[GitHub Actions CI](.github/workflows/ci.yml) runs on every push and pull request,
-and can also be started manually. Independent jobs use Python 3.12 and Node 22
-(matching the web container) to run Ruff, Python tests, TypeScript checks, Vitest,
-the production build, and HTTP smoke checks for the compute API and web preview.
-The frontend build is saved as the `web-dist` artifact for seven days; it does not
-include the separately generated scientific data and is not a standalone demo.
+[CI](.github/workflows/ci.yml) runs native Just checks on Windows and Linux, plus containerized Python
+and frontend checks on Linux. It installs dependencies, runs Ruff/Pytest, TypeScript/Vitest, the
+production build and a real compute HTTP startup check. The frontend build is retained as an artifact.
 
-CI does not download NASA datasets or SPICE kernels. Tests requiring generated data
-are skipped by the existing suites; synthetic-terrain and shared golden-vector
-checks still run. Full data validation and the data-backed stack smoke test remain
-local gates (`make validate`, `make smoke`). No deployment or secrets are required.
+CI does not download NASA datasets. Data-dependent tests skip when products are absent; synthetic
+and shared golden-vector checks still run. Full local verification uses `just compose-check` and
+`just compose-smoke` after the automatic initializer completes. The build artifact excludes scientific
+data; use a static bundle or Compose for a working deployment.
 
 ## How it works (short)
 

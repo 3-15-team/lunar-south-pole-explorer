@@ -18,5 +18,5 @@ def eph():
 
     root = default_root()
     if not (root / "index.json").exists():
-        pytest.skip("ephemeris tables not built (make data-ephem)")
+        pytest.skip("ephemeris tables not built (just data ephem)")
     return Ephemeris.load(root)

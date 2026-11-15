@@ -1,4 +1,4 @@
-"""Show which data products exist (make data-status).
+"""Show which data products exist (just data status).
 
     python -m pipeline.jobs.status
 """

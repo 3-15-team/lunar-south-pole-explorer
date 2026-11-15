@@ -14,12 +14,15 @@ lunar-south-pole-explorer/          (repository root; split from 3-15-team/explo
 │       └── warmup/   (lazy)       ≤10 s skippable fly-in (raw WebGL2), hides tile prefetch
 ├── libs/lunarcore/                Python twin of core/ (numpy + numba): geo, ephemeris, horizon,
 │                                  disk, metrics, suitability, tile IO — used by pipeline AND compute
-├── pipeline/                      offline jobs (`make data`): download → ephemeris → DEM tiles →
+├── pipeline/                      offline jobs (`just data-min`): download → ephemeris → DEM tiles →
 │                                  PSR → sites → horizon maps → pre-baked heatmaps → validation
 ├── services/compute/              FastAPI, CPU-only, stateless, content-addressed cache:
 │                                  region heatmaps, robustness Monte-Carlo, site metrics (cross-check)
-├── services/texgen/               OPTIONAL stub (compose profile "ai"), disabled — no API key
-├── infra/                         docker-compose.yml, Dockerfiles, nginx, cloud-agnostic deploy hooks
+├── services/texgen/               unused optional stub; not part of the local runtime
+├── compose.yaml                  complete local runtime with automatic real-data initialization
+├── justfile                      Compose wrappers and optional native development tasks
+├── tools/                        portable task orchestration, smoke checks, static export
+├── infra/                         Dockerfiles and nginx; cloud deployment remains undecided
 ├── data/  (gitignored)            raw/ work/ web/ — see DATA.md; manifest.json is committed
 └── docs/                          STATE, DECISIONS, LOG, DATA, METRICS, VALIDATION, REFERENCES, ...
 ```
@@ -31,6 +34,10 @@ browser ──/──────────▶ web (nginx: SPA + /data static)
         ──/api/──────▶ compute (FastAPI :8000) ──▶ data/work (horizon maps, cache)
 static-only fallback: any static host serving apps/web/dist + data/web  (no /api → pre-baked heatmaps)
 ```
+
+Compose uses a persistent named volume. The data initializer downloads/generates and verifies
+products before starting compute, then web. See [LOCAL.md](./LOCAL.md) for the one-command
+entry point, offline restarts, default-resolution limits, and containerized checks.
 
 - **One SPA, three lazy modules** sharing one state store (site, time, interval, observer
   height, layer, scenarios). Modes are not containers (ADR-007).

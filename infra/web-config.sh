@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs from the nginx image's /docker-entrypoint.d/ at container start: writes the SPA's runtime config
-# from env, so display settings change with `make up PANO_TERRAIN_INTERP=… PANO_RELIEF_AA=… PANO_MICRO=…` without a
+# from env (.env in Compose), so display settings can change without a
 # rebuild. Keys mirror apps/web/src/config.ts (URL ?interp=… / ?raa=… / ?micro=… still override in the browser).
 set -eu
 interp="${PANO_TERRAIN_INTERP:-catmull}"

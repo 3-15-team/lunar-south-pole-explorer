@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import json
 import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = Path(os.environ.get("DATA_DIR", ROOT / "data")).resolve()
@@ -47,16 +51,27 @@ def write_json(path: Path, obj, indent: int | None = 1) -> None:
 @contextmanager
 def _manifest_lock():
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    with open(MANIFEST.with_name("manifest.lock"), "w") as lf:
-        fcntl.flock(lf, fcntl.LOCK_EX)
+    with open(MANIFEST.with_name("manifest.lock"), "a+b") as lf:
+        if os.name == "nt":
+            if lf.seek(0, 2) == 0:
+                lf.write(b"\0")
+                lf.flush()
+            lf.seek(0)
+            msvcrt.locking(lf.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            fcntl.flock(lf, fcntl.LOCK_EX)
         try:
             yield
         finally:
-            fcntl.flock(lf, fcntl.LOCK_UN)
+            if os.name == "nt":
+                lf.seek(0)
+                msvcrt.locking(lf.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lf, fcntl.LOCK_UN)
 
 
 def _rel(path: Path) -> str:
-    return str(Path(path).resolve().relative_to(DATA))
+    return Path(path).resolve().relative_to(DATA).as_posix()
 
 
 def write_tree_listing(directory: Path, pattern: str = "**/*") -> Path:

@@ -9,5 +9,8 @@ data/*
 apps/web/dist
 dist-static
 .git
+.cache
+.env
+.env.*
 .idea
 prompts

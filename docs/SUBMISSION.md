@@ -20,7 +20,7 @@ every suitability score is transparent.
 
 - Repository: TODO (public URL)
 - Demo video (≤ 3 min, English subtitles): TODO
-- Live demo (optional; local `make up` is the primary demo): TODO
+- Live demo (optional; local `just compose-up` is the primary demo): TODO
 
 ## Project details
 
@@ -46,6 +46,6 @@ NASA/JPL NAIF SPICE kernels, JPL Horizons (validation). Full list: `docs/REFEREN
 ## Checklist before submitting
 
 - [ ] video uploaded with English subtitles (script: `docs/DEMO.md`)
-- [ ] repository public, README quick start works from a clean clone (`make setup data-min dev`)
+- [ ] repository public, README quick start works from a clean clone (`docker compose up --build --wait --wait-timeout 3600`)
 - [ ] References field = `docs/REFERENCES.md`
 - [ ] VALIDATION numbers copied into the description

@@ -79,3 +79,17 @@ not automatically modify this checkout.
 There is no cloud-provider dependency or new storage-service requirement in this
 increment. Existing file contracts are shared through a Docker volume; future
 object storage work can preserve those contracts separately.
+
+## Just interface
+
+With Just 1.55+ installed, `just compose-up` runs the exact startup command above.
+`just compose-check` runs lint, Python tests, frontend tests/typecheck/build;
+`just compose-smoke` checks real HTTP data and API operations. `just compose-down`,
+`just compose-status`, `just compose-logs`, `just compose-bootstrap`, and
+`just compose-data-status` expose the remaining common Compose operations.
+These recipes need only Just and Docker; native setup is not a dependency.
+
+The native recipes (`just setup`, `just setup-py`, `just data-min`, `just dev`)
+are a separate optional workflow. They use Node 22 and uv-managed Python 3.12,
+with a host dataset under `data/`. `just data <job>` invokes individual jobs;
+`just dist` exports a host-built static bundle using portable filesystem code.

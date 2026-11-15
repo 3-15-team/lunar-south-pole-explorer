@@ -201,10 +201,7 @@ Lunar South Pole Site Explorer — веб-приложение для сравн
 
 ```bash
 cd lunar-south-pole-explorer
-make setup      # Python-окружение + npm install
-make data-min   # минимальный набор данных (или `make data` — всё)
-make dev        # http://localhost:5173 (+ compute API на :8000)
-make up         # Docker: http://localhost:8642 — основной вариант демо
+docker compose up --build --wait --wait-timeout 3600
 ```
 
 Лицензия кода: Apache-2.0.

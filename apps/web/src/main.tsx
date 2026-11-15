@@ -56,7 +56,7 @@ async function boot(): Promise<void> {
     const [a, b] = interval.peek();
     if (!eph.covers(a) || !eph.covers(b)) interval.value = [eph.clamp(a), eph.clamp(Math.max(b, a + DAY))];
   } catch (e) {
-    status.value = `Data not found (${(e as Error).message}). Build it with \`make data-min\`.`;
+    status.value = `Data not found (${(e as Error).message}). Complete the local dataset setup and reload.`;
     return;
   }
   const client = new SiteClient(DATA_BASE);

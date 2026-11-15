@@ -1,4 +1,4 @@
-# Dev environment = pipeline + compute + test/lint tools.  make setup-py
+# Dev environment = pipeline + compute + test/lint tools.  just setup-py
 -r pipeline/requirements.txt
 -r services/compute/requirements.txt
 pytest==9.2.0

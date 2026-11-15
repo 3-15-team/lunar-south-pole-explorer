@@ -88,18 +88,18 @@ class DataStore:
 
     def require_eph(self) -> Ephemeris:
         if self.eph is None:
-            raise DataUnavailable("ephemeris tables missing (make data-ephem)")
+            raise DataUnavailable("ephemeris tables missing (just data ephem)")
         return self.eph
 
     def require_dem(self) -> TileStore:
         if not self.dem.exists:
-            raise DataUnavailable("DEM tiles missing (make data-tiles)")
+            raise DataUnavailable("DEM tiles missing (just data tiles)")
         return self.dem
 
     def require_region(self) -> dict:
         r = self.region
         if r is None or "features" not in r:
-            raise DataUnavailable("region horizon map / features missing (make data-horizon)")
+            raise DataUnavailable("region horizon map / features missing (just data horizon)")
         return r
 
     # ---------------------------------------------------------------- versioning

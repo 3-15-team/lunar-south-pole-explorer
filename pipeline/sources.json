@@ -1,5 +1,5 @@
 {
- "_comment": "Source datasets. `make data-fetch` downloads every entry whose tier is <= DATA_TIER (default 1), resumably, verifies size/sha256 and records them in data/manifest.json. Fill sha256 after the first verified download (the job prints it).",
+ "_comment": "Source datasets. `just data fetch` downloads every entry whose tier is <= DATA_TIER (default 1), resumably, verifies size/sha256 and records them in data/manifest.json. Fill sha256 after the first verified download (the job prints it).",
  "sources": [
   {
    "id": "naif-lsk",

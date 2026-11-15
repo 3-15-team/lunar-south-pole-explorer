@@ -29,6 +29,6 @@ Demo link (local stack): `http://localhost:8642/#s=site01&t=2027-04-28T00:00Z&i=
 
 ## Before recording
 
-- `make up` (offline-capable) or `make dev`; Chrome, 1600×960 or larger; hide bookmarks bar.
+- `just compose-up` (offline-capable) or `just dev`; Chrome, 1600×960 or larger; hide bookmarks bar.
 - Pre-load the demo link once (tiles cached), then reload and record.
 - English subtitles: keep the "say" column as the subtitle text (see `docs/SUBMISSION.md`).

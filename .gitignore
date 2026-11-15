@@ -22,3 +22,4 @@ dist-static/
 .env
 .env.*
 !.env.example
+.deploy.env

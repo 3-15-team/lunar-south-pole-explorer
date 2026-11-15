@@ -24,11 +24,13 @@ PANO_RELIEF_AA ?= 1
 PANO_MICRO ?= 1
 PANO_MICRO_DEFAULT ?=
 MAP_EARTH_ANTENNA ?=
+# droplet settings (DROPLET=root@<ip>, DOMAIN=…) kept out of git; see `make droplet`
+-include .deploy.env
 COMPOSE        := docker compose -f $(ROOT)/infra/docker-compose.yml --project-directory $(ROOT)
 export DATA_DIR COMPUTE_PORT COMPOSE_PORT DATA_BASE_URL PANO_TERRAIN_INTERP PANO_RELIEF_AA PANO_MICRO PANO_MICRO_DEFAULT MAP_EARTH_ANTENNA
 
 .DEFAULT_GOAL := help
-.PHONY: bootstrap help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
+.PHONY: bootstrap droplet help setup setup-py setup-web doctor data data-min data-fetch data-build data-ephem data-tiles \
         data-sites data-psr data-horizon data-heatmaps data-micro data-outer data-pull data-status validate dev web-dev \
         compute-dev web-build web-preview up up-ai down logs ps lint typecheck test test-py test-web \
         build smoke verify dist serve-dist deploy clean clean-data
@@ -174,6 +176,11 @@ dist: web-build ## Self-contained static site (SPA + data/web) in dist-static/
 
 serve-dist: ## Serve dist-static/ on :8081 (what any static host would serve)
 	cd dist-static && $(PYTHON_BOOT) -m http.server 8081
+
+droplet: ## Deploy to the droplet from .deploy.env (DROPLET=root@<ip>, DOMAIN=…): make up + Caddy HTTPS
+	@case "$(DROPLET)" in *'<'*) echo "edit .deploy.env: DROPLET=root@<your droplet ip>, DOMAIN=<your domain>"; exit 1;; esac
+	@test -n "$(DROPLET)" || { printf 'DROPLET=root@<ip>\nDOMAIN=lunar.example.org\n' > .deploy.env; echo "created .deploy.env — fill in DROPLET and DOMAIN, then: make droplet"; exit 1; }
+	@DROPLET=$(DROPLET) DOMAIN=$(DOMAIN) bash infra/deploy/droplet.sh
 
 deploy: ## Deploy: DEPLOY_TARGET=droplet DROPLET=root@<ip> [DOMAIN=…] (make up + Caddy HTTPS); also static, gcp, azure
 	@bash infra/deploy/deploy.sh $(DEPLOY_TARGET)

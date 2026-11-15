@@ -13,7 +13,7 @@
 - 2026-11-14 13:20 Python agent done: tiles z0–z9 (993 MB), horizon_240m (17 min, 10 cores), 4 pre-baked heatmaps, compute + texgen images; Horizons max err Sun 0.012″ / Earth 0.115″; vs Mazarico r = 0.977 / 0.972.
 - 2026-11-14 13:30 compose port moved to 8642 (8080/8088/8090/5001 used by another local stack — untouched); `make up` + smoke 9/9 green.
 - 2026-11-14 13:35 `make verify` green end-to-end.
-- 2026-11-14 12:40 repo split: `git subtree split --prefix=sandbox/dima` → new repo `lunar-south-pole-explorer` (main, no remote); session #1 ends here, resume via `prompts/03_NEW_REPO_PROMPT.md`.
+- 2026-11-14 12:40 repo split: `git subtree split --prefix=sandbox/dima` → new repo `lunar-south-pole-explorer` (main, no remote); session #1 ends here.
 - 2026-11-14 13:17 session #2, started; first session in the split repo, resumed from 4f7850d. Data/.venv/node_modules already in place; compose (:8642) already running from this path. Remote `origin` now set (3-15-team/lunar-south-pole-explorer).
 - 2026-11-14 13:22 `make verify` green (first run: pytest `Abort trap: 6` once, cold numba cache; reruns pass).
 - 2026-11-14 13:58 T-043 panorama AA: prefilter-only multiplier measured ineffective (≤ 3 % px changed at 8×) → supersampling + Gaussian resolve, σ configurable (env/`/config.json`/`?aa=`), default 1.0 px; σ = 0.5 reproduces the old frame (0.04 % px differ). verify green.

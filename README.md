@@ -47,7 +47,7 @@ Cloud deployment remains undecided. The local stack uses no provider-specific se
 
 ## Just commands
 
-[Just](https://just.systems/) is the task interface (1.55+, tested with 1.59). GNU Make is no longer used.
+[Just](https://just.systems/) is the task interface (1.59+, tested with 1.59). GNU Make is no longer used.
 With only Just and Docker installed:
 
 ```text

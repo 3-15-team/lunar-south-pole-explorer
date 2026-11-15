@@ -99,12 +99,15 @@ object storage work can preserve those contracts separately.
 
 ## Just interface
 
-With Just 1.55+ installed, `just compose-up` runs the exact startup command above.
+With Just 1.59+ installed, `just compose-up` runs the exact startup command above.
 `just compose-check` runs lint, Python tests, frontend tests/typecheck/build;
 `just compose-smoke` checks real HTTP data and API operations. `just compose-down`,
 `just compose-status`, `just compose-logs`, `just compose-bootstrap`, and
 `just compose-data-status` expose the remaining common Compose operations.
 These recipes need only Just and Docker; native setup is not a dependency.
+
+See [verification evidence](./LOCAL_VERIFICATION.md) for the tested environment,
+clean-volume generation, scientific/API checks, and offline restart results.
 
 The native recipes (`just setup`, `just setup-py`, `just data-min`, `just dev`)
 are a separate optional workflow. They use Node 22 and uv-managed Python 3.12,

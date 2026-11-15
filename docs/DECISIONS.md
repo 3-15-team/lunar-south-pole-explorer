@@ -2,6 +2,8 @@
 
 Format: id — decision — why — alternatives — date (UTC). Do not reopen unless it blocks.
 
+- **ADR-121** — GNU Make is retired. Root Compose bootstraps verified real scientific data and runs the complete local application; Just wraps Compose and optional portable native tasks. Cloud-provider selection and deployment are deferred. This supersedes ADR-003's Mac-specific operating assumptions and ADR-004's Make/deployment-stub workflow. — User requested Windows support, one-command local Compose, then Just adoption before choosing a cloud. — See [LOCAL.md](./LOCAL.md) and [verification](./LOCAL_VERIFICATION.md). — 2026-11-15
+
 - **ADR-001** — Project root is `sandbox/dima/` inside the team repo (branch `dima`); local commits only, no push. — User instruction 2026-11-14. — Separate repo. — 2026-11-14
 - **ADR-002** — Pitch Sun 15 Nov 2026 18:00 Asia/Yerevan (14:00 UTC); feature freeze Sun 14:30 local (10:30 UTC); video/slides done 16:30; submission ≥ 17:00. — User answer. — — 2026-11-14
 - **ADR-003** — Answered in kickoff: runs on the user's Mac (M1 Max, 32 GB, Docker via OrbStack); timezone Asia/Yerevan; no image-generation API key → texture L1 only (L2 out); git remote later. — Kickoff §11. — — 2026-11-14

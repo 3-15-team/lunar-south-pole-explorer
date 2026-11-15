@@ -1,4 +1,4 @@
-set minimum-version := "1.55.0"
+set minimum-version := "1.59.0"
 set dotenv-load
 [windows]
 set shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]

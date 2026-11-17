@@ -91,7 +91,7 @@ multiples of the pixel size from the pole):
 - `spkpos(target, et, "MOON_ME", "LT+S", "MOON")` for target `SUN` and `EARTH`
   (apparent geocentric-of-Moon positions, km). Topocentric correction is done by the
   consumer (subtract the site vector — essential for Earth: up to 0.26° parallax).
-- Uniform **UTC** grid: `2026-01-01T00:00:00Z` → `2037-01-01T00:00:00Z`, step **1800 s**.
+- Uniform **UTC** grid: `2026-01-01T00:00:00Z` → `2150-01-01T00:00:00Z` (the span of the DE440s kernel; beyond it the app clamps to the last record), step **1800 s**.
 - One file per calendar year: `data/web/ephem/{YYYY}.bin`, raw little-endian float32,
   records of 6 floats: `[sunX, sunY, sunZ, earthX, earthY, earthZ]` (km, MOON_ME).
   Record `k` of year Y is at `Date.UTC(Y,0,1) + k·1800 s`; the file has exactly
@@ -103,7 +103,7 @@ multiples of the pixel size from the pole):
   {"version": 1, "frame": "MOON_ME", "frameRealization": "MOON_ME_DE440_ME421",
    "observer": "MOON (301) centre", "aberration": "LT+S", "units": "km", "stepSeconds": 1800,
    "record": ["sunX","sunY","sunZ","earthX","earthY","earthZ"], "dtype": "float32-le",
-   "startUtc": "2026-01-01T00:00:00Z", "endUtc": "2037-01-01T00:00:00Z",
+   "startUtc": "2026-01-01T00:00:00Z", "endUtc": "2150-01-01T00:00:00Z",
    "years": [{"year": 2026, "url": "2026.bin", "records": 17520, "sha256": "..."}],
    "kernels": ["naif0012.tls", "..."], "sunRadiusKm": 695700.0, "earthRadiusKm": 6371.0084,
    "generated": "ISO-8601"}

@@ -17,7 +17,7 @@ def test_parse_and_format_utc():
 
 def test_tables_contiguous_and_nodes_exact(eph):
     assert eph.t0 == E.year_start_unix(2026)
-    assert eph.rec.shape[0] == sum(E.records_in_year(y) for y in range(2026, 2037))
+    assert eph.rec.shape[0] == sum(E.records_in_year(y) for y in range(2026, 2150))
     k = 12345
     S, Ea = eph.vectors(eph.t0 + k * 1800.0)
     assert np.array_equal(S, eph.rec[k, :3]) and np.array_equal(Ea, eph.rec[k, 3:])

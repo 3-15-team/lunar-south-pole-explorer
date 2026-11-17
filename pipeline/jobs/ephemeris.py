@@ -1,6 +1,6 @@
 """Sun/Earth ephemeris tables in MOON_ME -> data/web/ephem/{YYYY}.bin + index.json (docs/DATA.md §3).
 
-    python -m pipeline.jobs.ephemeris [--years 2026 2036] [--force]
+    python -m pipeline.jobs.ephemeris [--years 2026 2149] [--force]
 
 spkpos(target, et, "MOON_ME", "LT+S", "MOON") for SUN and EARTH on a uniform UTC grid (1800 s),
 float32-le records [sunX, sunY, sunZ, earthX, earthY, earthZ] (km). Also measures the linear
@@ -87,7 +87,7 @@ def interpolation_check(sp, years: list[int], tables: dict[int, np.ndarray], eve
 
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--years", nargs=2, type=int, default=[2026, 2036])
+    ap.add_argument("--years", nargs=2, type=int, default=[2026, 2149])
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--check-every", type=int, default=3, help="check every n-th mid-sample (1 = all)")
     a = ap.parse_args(argv)

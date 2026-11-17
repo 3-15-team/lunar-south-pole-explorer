@@ -20,7 +20,7 @@ from .geo import EARTH_RADIUS_KM, R_MOON, SUN_RADIUS_KM, az_el, enu_basis, obser
 
 STEP_SECONDS = 1800
 START_UTC = "2026-01-01T00:00:00Z"
-END_UTC = "2037-01-01T00:00:00Z"
+END_UTC = "2150-01-01T00:00:00Z"
 
 
 def parse_utc(s: str | float | int | datetime) -> float:

@@ -166,6 +166,7 @@ table.cmp thead th { text-align: right; font-size: 10px; }
 .c-ant { color: #ffd45e; }
 .skyplot { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
 .sky-canvas { width: 100%; height: 190px; display: block; border-radius: 4px; }
+.sky-canvas.clickable { cursor: crosshair; }
 .sky-note { font-size: 11px; margin-top: 2px; }
 .sky-readout { font-size: 12px; min-height: 18px; margin-top: 4px; color: #c9d1db; }
 .closeups { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }

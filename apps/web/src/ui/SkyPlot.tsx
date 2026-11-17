@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { makeSiteFrame } from '../core/ephemeris';
 import { profileAt } from '../core/horizon';
 import { evalAt, HOUR } from '../core/metrics';
-import { instant, interval, metricsState, services, siteResult, time } from '../state/store';
+import { instant, interval, metricsState, mode, requestPanoLook, services, siteResult, time } from '../state/store';
 import { fmtDeg, fmtDistance, fmtPct } from './format';
 import { skyElRange } from './skyRange';
 
@@ -25,6 +25,12 @@ function setupCanvas(c: HTMLCanvasElement): CanvasRenderingContext2D {
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   return g;
 }
+
+/** Plot margins (px): left axis labels, right, top, bottom azimuth labels. */
+const PL = 30;
+const PR = 6;
+const PT = 8;
+const PB = 22;
 
 /** Tracks drawn around the playhead when the interval tracks don't contain it (± this span). */
 const LOCAL_SPAN = 36 * HOUR;
@@ -99,10 +105,10 @@ export function SkyPlot() {
     const g = setupCanvas(c);
     const W = c.clientWidth;
     const H = c.clientHeight;
-    const L = 30;
-    const R = 6;
-    const T = 8;
-    const B = 22;
+    const L = PL;
+    const R = PR;
+    const T = PT;
+    const B = PB;
     const pw = W - L - R;
     const ph = H - T - B;
     const X = (az: number) => L + (az / 360) * pw;
@@ -241,15 +247,24 @@ export function SkyPlot() {
     }
   }, [sr, m, local, now, lo, hi, hover]);
 
-  const onMove = (e: MouseEvent) => {
+  /** Pointer → azimuth / elevation on the plot (null outside the plot area). */
+  const toSky = (e: MouseEvent) => {
     const c = ref.current;
-    if (!c) return;
+    if (!c) return null;
     const r = c.getBoundingClientRect();
     const px = e.clientX - r.left;
-    const pw = c.clientWidth - 36;
-    const az = ((px - 30) / pw) * 360;
-    if (az < 0 || az > 360) return setHover(null);
-    setHover({ az, el: 0, px });
+    const py = e.clientY - r.top;
+    const az = ((px - PL) / (c.clientWidth - PL - PR)) * 360;
+    const ph = c.clientHeight - PT - PB;
+    if (az < 0 || az > 360 || py < PT || py > PT + ph) return null;
+    return { az, el: hi - ((py - PT) / ph) * (hi - lo), px };
+  };
+  const onMove = (e: MouseEvent) => setHover(toSky(e));
+  // panorama only: turn the camera to the clicked direction
+  const canLook = mode.value === 'pano' && !!sr;
+  const onClick = (e: MouseEvent) => {
+    const p = canLook ? toSky(e) : null;
+    if (p) requestPanoLook({ az: p.az % 360, el: p.el });
   };
 
   const p = sr?.profile;
@@ -260,11 +275,13 @@ export function SkyPlot() {
       </div>
       <canvas
         ref={ref}
-        class="sky-canvas"
+        class={`sky-canvas ${canLook ? 'clickable' : ''}`}
+        title={canLook ? 'Click to turn the panorama to this direction' : undefined}
         role="img"
         aria-label="Sky plot: terrain horizon silhouette with the Sun and Earth tracks over the selected interval"
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
+        onClick={onClick}
       />
       {local && (
         <div class="sky-note muted">Playhead outside the interval: dashed tracks show ±36 h around it.</div>

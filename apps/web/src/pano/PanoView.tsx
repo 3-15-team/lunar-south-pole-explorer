@@ -148,14 +148,16 @@ export default function PanoView() {
         scene.eyeHeight = hObs.value;
         dirty = true;
       }),
-      // "look at the Sun / Earth" buttons (right panel): turn to the body as seen now
+      // "look at the Sun / Earth" buttons and clicks on the sky plot (right panel)
       effect(() => {
         const req = panoLookAt.value;
         if (!req || req.n <= lookSeen.current || !ready) return;
         lookSeen.current = req.n;
         const s = scene.state;
-        if (req.target === 'sun') scene.turnTo(s.sunAz, s.sunEl, performance.now());
-        else scene.turnTo(s.earthAz, s.earthEl, performance.now());
+        const t = req.target;
+        if (t === 'sun') scene.turnTo(s.sunAz, s.sunEl, performance.now());
+        else if (t === 'earth') scene.turnTo(s.earthAz, s.earthEl, performance.now());
+        else scene.turnTo(t.az, t.el, performance.now());
         dirty = true;
       }),
       effect(() => {

@@ -1,7 +1,7 @@
 // Timeline: playhead + interval handles, Sun/Earth availability strips, day and
 // lunar-day ("local noon") ticks, play/pause animation over the lunar day.
 import { useEffect, useRef } from 'preact/hooks';
-import { DAY, HOUR, ephRange, interval, metricsState, playSpeed, playing, setInterval_, time } from '../state/store';
+import { DAY, HOUR, ephRange, interval, metricsState, playSpeed, playing, setInterval_, site, siteResult, time } from '../state/store';
 import { fmtDate, fmtDuration, fmtShortDate, fromInputValue, toInputValue } from './format';
 
 const SPEEDS = [
@@ -53,7 +53,11 @@ export function Timeline() {
   const pad = Math.max(span * 0.15, DAY);
   const win: [number, number] = frozen.current ?? [Math.min(t0, t) - pad, Math.max(t1, t) + pad];
   const frac = (x: number) => (x - win[0]) / (win[1] - win[0]);
-  const m = metricsState.value;
+  // strips belong to one site: while the horizon / metrics of a newly picked point are computing, show none
+  // instead of the previous point's Sun/Earth availability
+  const ms0 = metricsState.value;
+  const sr0 = siteResult.value;
+  const m = ms0 && sr0 && ms0.key === sr0.key && sr0.site === site.value ? ms0 : null;
 
   // play loop
   useEffect(() => {

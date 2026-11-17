@@ -35,6 +35,12 @@ skipped when already in `data/manifest.json`, data jobs skip finished products.
 ## Deploy to a droplet (DigitalOcean or any Ubuntu VM)
 
 ```bash
+make droplet      # first run creates .deploy.env (git-ignored): set DROPLET=root@<ip> and DOMAIN=…, then run again
+```
+
+or explicitly:
+
+```bash
 make data                                                  # once, locally (the droplet never downloads from NASA)
 make deploy DEPLOY_TARGET=droplet DROPLET=root@203.0.113.7  # → https://203.0.113.7.nip.io
 make deploy DEPLOY_TARGET=droplet DROPLET=root@203.0.113.7 DOMAIN=lunar.example.org   # own domain (DNS A record → droplet IP)

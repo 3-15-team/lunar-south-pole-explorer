@@ -55,6 +55,14 @@ uniform float uReliefAA; // relief prefilter: scale of the true (anisotropic) pi
 uniform sampler2D uMicroC; uniform sampler2D uMicroF;
 uniform vec4 uMicroDim;   // coarse tile metres, coarse texels, fine tile metres, fine texels
 uniform float uMicro;     // amplitude; 0 = off (procedural bump fallback)
+// Surface detail (micro tiles, regolith noise) is anchored to the polar-stereographic grid, not to
+// this scene's site, so it stays put when a move rebuilds the scene around another site. Absolute
+// grid coordinates (≤ 300 km) don't fit float32 at mm texels, so the site's offset arrives already
+// reduced on the CPU (double): modulo each tile, and for the 37°-rotated sampling separately.
+uniform vec2 uGE; uniform vec2 uGN;           // local east / north → grid axes (× stereographic scale)
+uniform vec4 uMicroOffC; uniform vec4 uMicroOffF; // fract(site / L), fract(R37·site / L) per tile
+uniform vec2 uRegOff;                         // site mod REG_PERIOD (m)
+const float REG_PERIOD = 4096.0;              // regolith noise repeats every 4 km (invisible)
 const float TAU = 6.28318530718;
 const float PI = 3.14159265359;
 float hf(vec2 en) {
@@ -99,25 +107,30 @@ float hs(vec2 en) {
 }
 float edgeFrac(float z) { z = clamp(z, -1.0, 1.0); return 1.0 - (acos(z) - z * sqrt(1.0 - z * z)) / PI; }
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-float vnoise(vec2 x) { vec2 i = floor(x); vec2 f = fract(x); vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y); }
-float regolith(vec2 p, float px) {
+// value noise whose lattice repeats every c cells, so a whole-period shift leaves it unchanged
+float vnoiseP(vec2 x, float c) { vec2 i = floor(x); vec2 f = fract(x); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(mod(i, c)), hash(mod(i + vec2(1, 0), c)), u.x), mix(hash(mod(i + vec2(0, 1), c)), hash(mod(i + vec2(1, 1), c)), u.x), u.y); }
+// local (e, n) → grid-aligned offset from the site (metres)
+vec2 toGrid(vec2 en) { return en.x * uGE + en.y * uGN; }
+float regolith(vec2 en, float px) {
+  vec2 p = toGrid(en) + uRegOff;  // ≡ absolute grid position (mod REG_PERIOD)
   float v = 0.0, amp = 0.5, wl = 64.0;
-  for (int i = 0; i < 9; i++) { float vis = smoothstep(1.5 * px, 4.0 * px, wl); v += amp * vis * (vnoise(p / wl + float(i) * 7.3) - 0.5); wl *= 0.5; amp *= 0.6; }
+  for (int i = 0; i < 9; i++) { float vis = smoothstep(1.5 * px, 4.0 * px, wl); v += amp * vis * (vnoiseP(p / wl + float(i) * 7.3, REG_PERIOD / wl) - 0.5); wl *= 0.5; amp *= 0.6; }
   return v;
 }
 // one tile, two samplings (second rotated 37° and shifted) → aperiodic; ground adds, rocks max-compose
 const mat2 ROT37 = mat2(0.79864, 0.60181, -0.60181, 0.79864);
-vec2 microTile(sampler2D t, vec2 p, float L, float n, float px) {
+vec2 microTile(sampler2D t, vec2 p, float L, float n, float px, vec4 off) {
   float lod = log2(max(px * n / L, 1.0));                 // pixel footprint in texels → mip level
-  vec2 a = textureLod(t, p / L, lod).rg;
-  vec2 b = textureLod(t, (ROT37 * p) / L + vec2(0.3719, 0.6113), lod).rg;
+  vec2 a = textureLod(t, p / L + off.xy, lod).rg;
+  vec2 b = textureLod(t, (ROT37 * p) / L + off.zw + vec2(0.3719, 0.6113), lod).rg;
   return vec2((a.x + b.x) * 0.70711, max(a.y, b.y));
 }
 // micro height (m) above the DEM surface, prefiltered to footprint px; .y = rock height (albedo cue)
-vec2 microH(vec2 p, float px) {
-  vec2 c = microTile(uMicroC, p, uMicroDim.x, uMicroDim.y, px);
-  vec2 f = microTile(uMicroF, p, uMicroDim.z, uMicroDim.w, px);
+vec2 microH(vec2 en, float px) {
+  vec2 p = toGrid(en);
+  vec2 c = microTile(uMicroC, p, uMicroDim.x, uMicroDim.y, px, uMicroOffC);
+  vec2 f = microTile(uMicroF, p, uMicroDim.z, uMicroDim.w, px, uMicroOffF);
   return uMicro * vec2(c.x + c.y + f.x + f.y, c.y + f.y);
 }
 void main() {
@@ -357,6 +370,11 @@ export class PanoScene {
         uMicroF: { value: null },
         uMicroDim: { value: new THREE.Vector4(32, 1024, 4, 1024) },
         uMicro: { value: 0 },
+        uGE: { value: new THREE.Vector2(this.k * this.eG[0], this.k * this.eG[1]) },
+        uGN: { value: new THREE.Vector2(this.k * this.nG[0], this.k * this.nG[1]) },
+        uMicroOffC: { value: new THREE.Vector4() },
+        uMicroOffF: { value: new THREE.Vector4() },
+        uRegOff: { value: new THREE.Vector2() },
         uBC: { value: new THREE.Vector2(...(this.interp === 'bilinear' ? [0, 0.5] : INTERP_BC[this.interp])) },
       },
     });
@@ -384,6 +402,25 @@ export class PanoScene {
     this.marker.add(fill, rim);
     this.marker.visible = false;
     this.scene.add(this.marker);
+    this.anchorSurface();
+  }
+
+  /**
+   * Site offset for the grid-anchored surface detail (see the shader comment at uGE), reduced in
+   * double precision: per micro tile fract(site / L) and, for the 37°-rotated sampling,
+   * fract(R37·site / L); for the regolith noise site mod REG_PERIOD. Re-run when tile sizes change.
+   */
+  private anchorSurface(): void {
+    const u = this.terrainMat.uniforms;
+    const { x, y } = this.site;
+    const fr = (v: number) => v - Math.floor(v);
+    const rx = 0.79864 * x - 0.60181 * y; // ROT37 · site, same matrix as the shader
+    const ry = 0.60181 * x + 0.79864 * y;
+    const off = (L: number) => new THREE.Vector4(fr(x / L), fr(y / L), fr(rx / L), fr(ry / L));
+    u.uMicroOffC.value = off(u.uMicroDim.value.x);
+    u.uMicroOffF.value = off(u.uMicroDim.value.z);
+    const P = 4096; // REG_PERIOD
+    u.uRegOff.value.set(x - P * Math.floor(x / P), y - P * Math.floor(y / P));
   }
 
   /**
@@ -399,6 +436,7 @@ export class PanoScene {
           u.uMicroC.value = m.coarse.tex;
           u.uMicroF.value = m.fine.tex;
           u.uMicroDim.value.set(m.coarse.meters, m.coarse.size, m.fine.meters, m.fine.size);
+          this.anchorSurface(); // offsets depend on the tile sizes just loaded
           return true;
         })
         .catch(() => false);

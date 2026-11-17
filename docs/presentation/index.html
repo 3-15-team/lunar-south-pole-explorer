@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Lunar South Pole Site Explorer — презентация</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Слайды 1280x720 (16:9). Печать: Ctrl/Cmd+P → «Сохранить как PDF», фон включить, поля = нет. */
+  @page { size: 1280px 720px; margin: 0; }
+  :root { --bg:#0b0f1a; --panel:#141b2b; --line:#26324a; --text:#e8ecf4; --mute:#9aa7c0; --gold:#ffd25a; --blue:#6ab4ff; --red:#ff7a7a; --green:#6fe0a0; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:#05070d; color:var(--text);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide { width:1280px; height:720px; margin:24px auto; padding:48px 64px; background:var(--bg);
+    position:relative; overflow:hidden; page-break-after:always; break-after:page;
+    background-image: radial-gradient(ellipse at 90% -10%, #1b2a4a 0%, transparent 55%); }
+  .slide:last-child { page-break-after:auto; break-after:auto; }
+  h1 { font-size:46px; margin:0 0 6px; letter-spacing:-.5px; }
+  h2 { font-size:38px; margin:0 0 24px; color:var(--gold); letter-spacing:-.3px; }
+  h3 { font-size:22px; margin:0 0 8px; }
+  p, li { font-size:21px; line-height:1.42; }
+  ul { margin:0; padding-left:24px; } li { margin:7px 0; }
+  .mute { color:var(--mute); }
+  .num { position:absolute; right:40px; bottom:24px; color:var(--mute); font-size:15px; }
+  .foot { position:absolute; left:64px; bottom:24px; color:var(--mute); font-size:15px; }
+  .grid { display:grid; gap:20px; }
+  .g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:1fr 1fr 1fr; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; }
+  .card p, .card li { font-size:18px; }
+  .tag { display:inline-block; font-size:14px; padding:3px 10px; border-radius:99px; background:#1f2b45; color:var(--blue); margin-bottom:8px; }
+  .bad { color:var(--red); } .good { color:var(--green); } .gold { color:var(--gold); }
+  .big { font-size:54px; font-weight:700; color:var(--gold); line-height:1; }
+  img.shot { width:100%; border-radius:12px; border:1px solid var(--line); display:block; }
+  .cap { font-size:14px; color:var(--mute); margin-top:6px; }
+  .role { font-size:19px; color:var(--mute); margin-top:6px; line-height:1.4; }
+  .name { font-size:30px; font-weight:700; }
+  .avatar { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,#ffd25a,#6ab4ff); color:#0b0f1a;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:30px; margin-bottom:14px; }
+  table { border-collapse:collapse; width:100%; } td, th { text-align:left; padding:8px 10px; font-size:18px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mute); font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:.5px; }
+  .nav { position:fixed; right:16px; bottom:12px; font-size:13px; color:var(--mute); }
+  @media print { html, body { background:var(--bg); } .slide { margin:0; } .nav { display:none; } }
+</style>
+</head>
+<body>
+
+<!-- 0. Титул -->
+<section class="slide" style="display:flex; flex-direction:column; justify-content:center;">
+  <div class="mute" style="font-size:20px; letter-spacing:2px; text-transform:uppercase;">NASA Space Apps 2026 · CLPS Lunar Mission Browser</div>
+  <h1 style="font-size:72px; margin:18px 0;">Lunar South Pole<br>Site Explorer</h1>
+  <p style="font-size:30px; color:var(--gold); margin:0 0 30px;">Подходит ли место и дата посадки — и что изменится, если дата сдвинется?</p>
+  <p class="mute" style="max-width:900px;">Солнце и Земля на фоне реального рельефа горизонта по данным NASA LRO LOLA. Сравнение сценариев за секунды вместо нескольких специализированных инструментов.</p>
+</section>
+
+<!-- 1. Команда -->
+<section class="slide">
+  <h2>Команда</h2>
+  <div class="grid g3" style="margin-top:40px;">
+    <div class="card"><div class="avatar">Д</div><div class="name">Дмитрий Клестов</div>
+      <div class="role">AI, анализ данных, карты,<br>подготовка данных, расчёты</div></div>
+    <div class="card"><div class="avatar">А</div><div class="name">Александр Кихев</div>
+      <div class="role">UI, анализ требований,<br>адаптация результатов, тестирование</div></div>
+    <div class="card"><div class="avatar">Р</div><div class="name">Роман</div>
+      <div class="role">DevOps, советы</div></div>
+  </div>
+  <div class="num">1</div>
+</section>
+
+<!-- 2. Проблемы -->
+<section class="slide">
+  <h2>Проблема: выбор места посадки у южного полюса</h2>
+  <div class="grid g2">
+    <div class="card"><span class="tag">Физика</span>
+      <ul>
+        <li>Солнце поднимается не выше ~1,5° над горизонтом и за месяц обходит небо по кругу</li>
+        <li>Хребет в 50–100 км может скрыть Солнце на дни</li>
+        <li>Земля «качается» (либрация) и может уйти за рельеф — связи нет</li>
+        <li>Кратеры — вечная тень, соседний гребень — почти непрерывный свет</li>
+      </ul></div>
+    <div class="card"><span class="tag">Работа аналитиков</span>
+      <ul>
+        <li>Каждая пара «место–дата» — отдельный заход в разные интерфейсы и сырые таблицы</li>
+        <li>Запуск сдвигается — всё пересчитывается заново</li>
+        <li>Наука и инженерия хотят разного: свет, лёд, связь, уклон</li>
+        <li>Результат трудно показать коллегам и неспециалистам</li>
+      </ul></div>
+  </div>
+  <div class="card" style="margin-top:20px; display:flex; gap:32px; align-items:center;">
+    <div class="big" style="white-space:nowrap; font-size:44px;">89% → 24%</div>
+    <p style="margin:0;">Пример из нашей демонстрации: Connecting ridge, 14 суток от 2027-04-28 даёт 89% света и ночь 5 ч. Сдвиг на 10 суток: 24% света и ночь 108 ч. Для солнечного аппарата это может стать концом миссии.</p>
+  </div>
+  <div class="num">2</div>
+</section>
+
+<!-- 3. Требования -->
+<section class="slide">
+  <h2>Требования</h2>
+  <div class="grid g2">
+    <div class="card"><span class="tag">Из задания NASA</span>
+      <ul>
+        <li>Выбор места: каталог (Apollo, CLPS, другие страны) и любые координаты</li>
+        <li>Дата и время, динамика по лунным суткам</li>
+        <li>Положение Солнца и Земли относительно горизонта с реальным рельефом</li>
+        <li>Время до заката и до Earthset</li>
+        <li>Метрики: высота Солнца, длительность света, окна связи с Землёй</li>
+        <li>Сравнение нескольких сценариев</li>
+      </ul></div>
+    <div class="card"><span class="tag">Что добавили мы</span>
+      <ul>
+        <li>Вопрос «а если сдвиг на N дней?» — одним слайдером</li>
+        <li>Прозрачная оценка пригодности (Suitability): все веса открыты</li>
+        <li>Два уровня: для планировщика и для широкой публики</li>
+        <li>Проверка расчётов по JPL Horizons</li>
+        <li>Открытые данные NASA, запуск одной командой</li>
+        <li>Работа в браузере без установки</li>
+      </ul></div>
+  </div>
+  <div class="num">3</div>
+</section>
+
+<!-- 4. Существующие решения -->
+<section class="slide">
+  <h2>Существующие решения и их недостатки</h2>
+  <table>
+    <tr><th style="width:17%">Инструмент</th><th style="width:40%">Что даёт</th><th>Недостатки для быстрой оценки</th></tr>
+    <tr><td><b>Quickmap</b><br><span class="mute" style="font-size:14px">Arizona State University</span></td>
+      <td>Снимки высокого разрешения, топография, данные LRO. Хорош для изучения рельефа полярных регионов</td>
+      <td class="bad">Интерфейс для специалистов; нет готового ответа «хватит ли света и связи на эту дату»; сценарии не сравнить рядом</td></tr>
+    <tr><td><b>Moon Trek</b><br><span class="mute" style="font-size:14px">NASA</span></td>
+      <td>3D-визуализация поверхности, топография, понимание рельефа в точке посадки</td>
+      <td class="bad">Показывает рельеф, но не считает время до заката и Earthset; нет метрик энергии и связи; нет сдвига даты</td></tr>
+    <tr><td><b>JPL Horizons</b><br><span class="mute" style="font-size:14px">NASA/JPL</span></td>
+      <td>Точные эфемериды: углы Солнца и Земли для любой точки Луны и момента времени</td>
+      <td class="bad">Таблицы без рельефа; горизонт и тени нужно считать отдельно; вход через форму или командную строку</td></tr>
+  </table>
+  <div class="card" style="margin-top:22px;">
+    <p style="margin:0;"><b class="gold">Разрыв:</b> данные есть, но чтобы оценить одну пару «место–дата», нужно пройти по трём инструментам и самому свести результаты. Для десяти сценариев после сдвига запуска это дни работы.</p>
+  </div>
+  <div class="num">4</div>
+</section>
+
+<!-- 5. Решение: карта -->
+<section class="slide">
+  <h2>Наше решение: режим карты</h2>
+  <div style="display:grid; grid-template-columns: 1.55fr 1fr; gap:24px;">
+    <div>
+      <img class="shot" src="img/map-suitability.png" alt="Режим карты: слои, сценарии, небесный график, таймлайн">
+      <div class="cap">Карта юга Луны в полярной стереографической проекции; слой Suitability, сценарии слева, небесный график справа</div>
+    </div>
+    <div>
+      <ul style="font-size:18px;">
+        <li><b>Живое освещение</b> реальным Солнцем на выбранную дату, трассировка теней с конечным диском Солнца</li>
+        <li><b>Слои:</b> освещённость %, видимость Земли %, самая длинная ночь, уклон, Suitability</li>
+        <li><b>Вердикт</b> Viable / Marginal / Risky и таймер до заката и Earthset</li>
+        <li><b>Небесный график:</b> горизонт по LOLA, треки Солнца и Земли, либрация</li>
+        <li><b>Сценарии рядом</b> и слайдер «а если сдвиг +N дней»</li>
+        <li><b>Связь с Землёй:</b> какая высота антенны нужна для линка</li>
+        <li><b>Календарь</b> света на 60 дней и таймлайн с проигрыванием</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot">Горизонт: 1440 азимутов, до 300 км, LOLA до 5 м у основных точек</div>
+  <div class="num">5</div>
+</section>
+
+<!-- 5b. Графики связи и Suitability -->
+<section class="slide">
+  <h2>Связь с Землёй и оценка пригодности</h2>
+  <div style="display:grid; grid-template-columns: 330px 1fr; gap:32px; align-items:start;">
+    <div>
+      <img class="shot" src="img/antenna.png" alt="Блок: связь с Землёй против высоты антенны">
+      <div class="cap">Высота антенны против доли времени с линком</div>
+    </div>
+    <div>
+      <div class="grid g2" style="gap:16px;">
+        <div class="card"><h3 class="gold">Связь с Землёй</h3>
+          <p>Земля в окне либрации может скрыться за рельефом. График показывает, на какой высоте мачты связь есть 50% и 90% времени.</p></div>
+        <div class="card"><h3 class="gold">Свет и ночь</h3>
+          <p>Процент света за интервал, самая длинная ночь, время до заката. Всё считается по реальному горизонту, а не по гладкой сфере.</p></div>
+        <div class="card"><h3 class="gold">Suitability</h3>
+          <p>Прозрачная формула: свет 0,3 · ночь 0,3 · Земля 0,25 · уклон 0,1 · рельеф 0,05. Обученной модели нет, каждый вес виден и описан.</p></div>
+        <div class="card"><h3 class="gold">Лучшие точки</h3>
+          <p>Задайте миссию, размер площадки и максимальный уклон, и карта подсветит лучшие места в кадре.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="num">6</div>
+</section>
+
+<!-- 6. Панорама -->
+<section class="slide">
+  <h2>Наше решение: режим панорамы</h2>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:18px;">
+    <div><img class="shot" src="img/panorama-sun.png" style="height:285px; object-fit:cover; object-position:top;" alt="Панорама: Солнце над горизонтом">
+      <div class="cap">Солнце скользит по гребню; на экране: закат через 5 суток 15 часов</div></div>
+    <div><img class="shot" src="img/panorama-earth.png" style="height:285px; object-fit:cover; object-position:top;" alt="Панорама: Земля над горизонтом">
+      <div class="cap">Рельеф LOLA 5 м, мягкие тени и микрорельеф</div></div>
+  </div>
+  <div class="grid g2" style="gap:16px;">
+    <div class="card"><span class="tag">Для широкой публики</span>
+      <ul><li><b>«Stand here»:</b> встать в точку и осмотреться глазами посадочного модуля</li>
+          <li>Солнце и Земля в истинном угловом размере, у Земли видна фаза</li>
+          <li>Ходьба WASD по рельефу LOLA 5 м с мягкими тенями</li></ul></div>
+    <div class="card"><span class="tag">Удобство</span>
+      <ul><li>Интро-пролёт 9 секунд (можно пропустить), режимы Explorer и Planner</li>
+          <li>Обратные отсчёты до заката и Earthrise прямо на экране</li>
+          <li>Кнопки Enhanced / Realistic, ссылка Share, всё на одном состоянии с картой</li></ul></div>
+  </div>
+  <div class="foot" style="bottom:14px;">Микрорельеф и звёзды сгенерированы (синтетические), приложение прямо об этом сообщает</div>
+  <div class="num">7</div>
+</section>
+
+<!-- 7. Выводы -->
+<section class="slide">
+  <h2>Выводы</h2>
+  <div class="grid g3" style="margin-bottom:20px;">
+    <div class="card"><div class="big" style="font-size:40px;">1 экран</div><p class="mute" style="margin-top:10px;">вместо трёх инструментов: свет, ночь, связь и рельеф по месту и дате</p></div>
+    <div class="card"><div class="big" style="font-size:40px;">слайдер</div><p class="mute" style="margin-top:10px;">«а если сдвиг +N дней» превращает пересчёт в одно движение</p></div>
+    <div class="card"><div class="big" style="font-size:40px;">0,012″</div><p class="mute" style="margin-top:10px;">отклонение направления на Солнце от JPL Horizons (на Землю 0,115″)</p></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3 class="gold">Как решается задача</h3>
+      <ul><li>Реальный горизонт из LOLA вместо гладкой сферы</li>
+          <li>Сценарии рядом и оценка пригодности с открытыми весами</li>
+          <li>Карта, небесный график, календарь, панорама в одном состоянии</li></ul></div>
+    <div class="card"><h3 class="gold">Зачем это NASA</h3>
+      <ul><li>Миссии CLPS и Artemis идут к полюсу за водяным льдом</li>
+          <li>Аппарат без питания или связи — потерянная миссия</li>
+          <li>Сдвиги графика постоянны: быстрый пересмотр места и даты экономит время команды</li>
+          <li>Тот же инструмент объясняет публике, почему посадка на полюсе так сложна</li></ul></div>
+  </div>
+  <div class="foot">Данные: NASA LRO LOLA, NAIF SPICE, проверка JPL Horizons · Apache-2.0</div>
+  <div class="num">8</div>
+</section>
+
+<div class="nav">← → / PgUp PgDn — навигация · печать в PDF: 1280×720, без полей</div>
+<script>
+  const s=[...document.querySelectorAll('.slide')]; let i=0;
+  const cur=()=>{const y=innerHeight/2; i=Math.max(0,s.findIndex(e=>e.getBoundingClientRect().bottom>y));};
+  addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){cur(); i=Math.min(s.length-1,i+1); s[i].scrollIntoView({behavior:'smooth',block:'center'}); e.preventDefault();}
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){cur(); i=Math.max(0,i-1); s[i].scrollIntoView({behavior:'smooth',block:'center'}); e.preventDefault();}
+  });
+</script>
+</body>
+</html>

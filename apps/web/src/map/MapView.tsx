@@ -433,33 +433,40 @@ export default function MapView() {
             <button class="btn small" onClick={findCandidates} disabled={candBusy}>
               {candBusy ? 'Scoring…' : 'Find best spots in view'}
             </button>
-            {cands && (
-              <ol class="cands">
-                {cands.length === 0 && <li class="muted">No location passes the hard constraints here.</li>}
-                {cands.map((c) => (
-                  <li>
-                    <button class="linkish" onClick={() => (siteRef.value = customFromXY(c.x, c.y, `Candidate ${(c.score * 100).toFixed(0)}`))}>
-                      score {(c.score * 100).toFixed(0)} · sun {fmtPct(c.features.illum)} · night {fmtHours(c.features.dark)}
-                    </button>
-                    <span class={`stab ${c.rankStability! >= 0.8 ? 'good' : c.rankStability! >= 0.5 ? '' : 'bad'}`} title="Share of 200 Monte-Carlo weight draws (Dirichlet around the preset) in which this spot stays in the top 5 of the 40 best distinct spots in view — robustness, not probability">
-                      {Math.round(c.rankStability! * 100)}% top-5
-                    </span>
-                  </li>
-                ))}
-              </ol>
+            {cands && cands.length === 0 && <div class="hint">No location passes the hard constraints here.</div>}
+            {cands && cands.length > 0 && (
+              <>
+                <div class="cands-head" title="Share of 200 Monte-Carlo weight draws (Dirichlet around the preset) in which a spot stays in the top 5 of the 40 best distinct spots in view — robustness, not probability">
+                  <span>score · sun · night</span>
+                  <span>top-5</span>
+                </div>
+                <ol class="cands">
+                  {cands.map((c) => (
+                    <li>
+                      <button class="linkish" onClick={() => (siteRef.value = customFromXY(c.x, c.y, `Candidate ${(c.score * 100).toFixed(0)}`))}>
+                        {(c.score * 100).toFixed(0)} · {fmtPct(c.features.illum)} · {fmtHours(c.features.dark)}
+                      </button>
+                      <span class={`stab ${c.rankStability! >= 0.8 ? 'good' : c.rankStability! >= 0.5 ? '' : 'bad'}`}>{Math.round(c.rankStability! * 100)}%</span>
+                    </li>
+                  ))}
+                </ol>
+              </>
             )}
-            <div class="row-btns">
-              <button class="btn small" onClick={loadRegion} disabled={region?.busy}>
-                Region overview (server)
-              </button>
-              {region && !region.busy && !region.error && (
-                <button class="btn small" onClick={() => { regionLayer.current.setVisible(false); setRegion(null); }}>
-                  Hide
+            <details class="sub">
+              <summary>Region overview · weights</summary>
+              <div class="row-btns">
+                <button class="btn small" onClick={loadRegion} disabled={region?.busy}>
+                  Region overview (server)
                 </button>
-              )}
-            </div>
-            {region && <div class={`hint ${region.error ? 'warn' : ''}`}>{region.error ?? region.label}</div>}
-            <div class="hint">Weights: sun {pr.weights.illum} · night {pr.weights.dark} · Earth {pr.weights.earth} · slope {pr.weights.slope} · relief {pr.weights.relief}. No trained model — every term is in docs/METRICS.md.</div>
+                {region && !region.busy && !region.error && (
+                  <button class="btn small" onClick={() => { regionLayer.current.setVisible(false); setRegion(null); }}>
+                    Hide
+                  </button>
+                )}
+              </div>
+              {region && <div class={`hint ${region.error ? 'warn' : ''}`}>{region.error ?? region.label}</div>}
+              <div class="hint">Weights: sun {pr.weights.illum} · night {pr.weights.dark} · Earth {pr.weights.earth} · slope {pr.weights.slope} · relief {pr.weights.relief}. No trained model — every term is in docs/METRICS.md.</div>
+            </details>
           </div>
         )}
       </div>
@@ -481,7 +488,7 @@ export default function MapView() {
         {computeOnline.value === false && L === 'suit' && <div class="badge">compute service offline — client GPU only</div>}
       </div>
       <div class="map-ui bottom-left">
-        <div class="readout">{hover || 'Move the cursor over the terrain'}</div>
+        <div class="readout" title={hover}>{hover || 'Move the cursor over the terrain'}</div>
         {engStatus && <div class="readout muted">{engStatus}</div>}
       </div>
     </div>

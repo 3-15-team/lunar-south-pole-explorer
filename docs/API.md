@@ -14,7 +14,7 @@ restart the service after rebuilding data (`make data-*`) so it picks up the new
 Conventions: times are ISO-8601 UTC strings (`2026-12-01T00:00:00Z`); coordinates are MOON_ME lat/lon
 (degrees, east-positive) or LUNAR:SPS metres (`x`, `y`, DATA.md §1); azimuth clockwise from local North.
 Errors: `422` schema violation, `400` invalid values (e.g. `t1 <= t0`, outside the ephemeris range
-2026-01-01…2037-01-01, outside DEM coverage, too many samples), `503` a data product is not built yet
+2026-01-01…2150-01-01, outside DEM coverage, too many samples), `503` a data product is not built yet
 (message says which `make` target builds it), `404` unknown heatmap id. Responses carry `X-Cache: hit|miss`.
 
 ## `GET /health`

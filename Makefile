@@ -80,7 +80,7 @@ data-fetch: ## Resumable, verified downloads into data/raw (records data/manifes
 
 data-build: data-ephem data-tiles data-sites data-psr data-horizon data-heatmaps data-micro data-outer ## Build all products (idempotent)
 
-data-ephem: ## Sun/Earth tables in MOON_ME 2026-2036 -> data/web/ephem
+data-ephem: ## Sun/Earth tables in MOON_ME 2026-2149 -> data/web/ephem
 	$(PY) -m pipeline.jobs.ephemeris
 
 data-tiles: ## DEM tile pyramid LPS-2560 -> data/web/dem (+ err)

@@ -47,8 +47,8 @@ Built for the NASA Space Apps Challenge 2026, challenge *CLPS Lunar Mission Brow
 ## 3. How it works
 
 1. **Ephemerides.** Sun and Earth positions in the lunar body-fixed MOON_ME frame are computed offline
-   with NASA/JPL SPICE (DE440 planetary ephemeris and the lunar orientation kernels) for 2026–2036 every
-   30 minutes (~4 MB in total). The browser interpolates and corrects for the observer's position on the
+   with NASA/JPL SPICE (DE440 planetary ephemeris and the lunar orientation kernels) for 2026–2149 every
+   30 minutes (one 0.4 MB file per year, loaded on demand). The browser interpolates and corrects for the observer's position on the
    surface (topocentric parallax matters for the Earth: up to 0.26°).
 2. **Terrain.** LOLA digital elevation models (80 m and 40 m for 80°S–90°S, 5 m around the
    LOLA 5 m candidate sites) are converted into a tile pyramid in south polar stereographic projection (5 m to 2560 m per

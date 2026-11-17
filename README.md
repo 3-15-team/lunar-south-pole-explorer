@@ -127,7 +127,7 @@ local gates (`make validate`, `make smoke`). No deployment or secrets are requir
 ## How it works (short)
 
 - **Ephemerides**: SPICE (DE440 + lunar PA/ME frames) → Sun & Earth positions in MOON_ME,
-  2026–2036 every 30 min (float32 per year, ~4 MB). Topocentric correction in the browser.
+  2026–2149 every 30 min (float32 per year, ~0.4 MB each, loaded on demand; ~50 MB in total). Topocentric correction in the browser.
   Validated against JPL Horizons (`docs/VALIDATION.md`).
 - **Terrain**: LOLA 80/40 m polar DEM + 5 m site DEMs → our LPS-2560 tile pyramid (`docs/DATA.md`).
 - **Horizon**: multi-resolution ray-march out to 300 km with exact spherical geometry; 1440

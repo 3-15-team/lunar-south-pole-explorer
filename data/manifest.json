@@ -373,14 +373,14 @@
    "size": 648341
   },
   "ephem": {
-   "bytes": 4631904,
-   "files": 12,
-   "generated": "2026-11-15T07:57:04Z",
+   "bytes": 52202560,
+   "files": 125,
+   "generated": "2026-11-17T09:31:09Z",
    "job": "pipeline/jobs/ephemeris.py",
    "kind": "tree",
    "path": "web/ephem/SHA256SUMS",
-   "sha256": "40081e6eae788991e109fffc928d09c83243b8177e4b3c2def98b4c26ea05f6c",
-   "size": 902
+   "sha256": "a171a5fa07486b693c3d76907eb3dcdd9a8f0c1de38e3acb44dc98db778cbc88",
+   "size": 9377
   },
   "err": {
    "bytes": 81588362,

@@ -14,7 +14,7 @@ P0 — bootstrap
 
 P1 — walking skeleton
 - [x] T-010 `libs/lunarcore` geo/tiles/ephemeris + golden vectors (Python agent)
-- [x] T-011 ephemeris tables 2026–2036 (`data/web/ephem`) — Horizons validation: see `docs/VALIDATION.md`
+- [x] T-011 ephemeris tables 2026–2149 (`data/web/ephem`) — Horizons validation: see `docs/VALIDATION.md`
 - [x] T-012 DEM tiles z0–z9: 8259 tiles, 993 MB (+ error tiles z0–z5, 82 MB); sources align with LPS-2560, no resampling
 - [x] T-013 PSR GeoJSON (1531 polygons) + catalog (29 sites, 22 in coverage; PGDA points = DEM summit, Site04 56 m from Mazarico Site 4)
 - [x] T-014 web skeleton: Vite 6 / Preact 10 / TS 5.9, signals store + URL hash codec
